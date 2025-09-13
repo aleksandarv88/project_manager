@@ -1,0 +1,67 @@
+{% extends "hello/base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Add Item{% endblock %}
+
+{% block content %}
+
+<div class="row">
+  <!-- Add Item Form -->
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Add New Item</div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            {{ form.name.label_tag }}
+            {{ form.name|add_class:"form-control" }}
+          </div>
+          <div class="mb-3">
+            {{ form.image.label_tag }}
+            {{ form.image|add_class:"form-control" }}
+          </div>
+          <button type="submit" class="btn btn-success">Add Item</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Items Dropdown + Image Preview -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-secondary text-white">Existing Items</div>
+      <div class="card-body">
+        <form method="POST" action="{% url 'delete_item_post' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="item_select" class="form-label">Select Item</label>
+            <select id="item_select" name="item_id" class="form-select" onchange="showImage()">
+              {% for item in items %}
+                <option value="{{ item.id }}" data-img-url="{{ item.image.url }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Image Preview -->
+          <div class="mb-3">
+            <img id="item_image_preview" src="{% if items %}{{ items.0.image.url }}{% endif %}" class="img-fluid rounded" style="max-height:200px;">
+          </div>
+
+          <button type="submit" class="btn btn-danger">Delete Selected Item</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showImage() {
+    const select = document.getElementById('item_select');
+    const img = document.getElementById('item_image_preview');
+    const url = select.options[select.selectedIndex].getAttribute('data-img-url');
+    img.src = url;
+}
+</script>
+
+{% endblock %}

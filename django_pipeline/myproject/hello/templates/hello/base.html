@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}My Project{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #2c2c2c; /* dark grey */
+            color: #f0f0f0; /* light text */
+        }
+        .card {
+            background-color: #3a3a3a; /* slightly lighter for cards */
+            color: #f0f0f0;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-success {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .navbar {
+            background-color: #1f1f1f; /* dark navbar */
+        }
+        a {
+            color: #0d6efd;
+        }
+        a:hover {
+            color: #0a58ca;
+            text-decoration: none;
+        }
+        /* Ensure all text is readable on dark background */
+        body, .card, .navbar, .list-group-item {
+            color: #f0f0f0 !important; /* light grey text */
+        }
+
+        /* Form labels and placeholders */
+        .form-label, .form-control, .form-select {
+            color: #f0f0f0; /* text inside inputs and dropdowns */
+            background-color: #3a3a3a; /* dark input background */
+            border-color: #555; /* visible border */
+        }
+
+        /* Inputs on focus */
+        .form-control:focus, .form-select:focus {
+            background-color: #3a3a3a;
+            color: #f0f0f0;
+            border-color: #0d6efd;
+            box-shadow: none;
+        }
+
+        /* Buttons stay bright */
+        .btn-primary, .btn-success, .btn-danger {
+            color: #fff;
+        }
+        /* Navbar links */
+        .navbar .nav-link, .navbar-brand {
+            color: #f0f0f0 !important;
+        }
+
+        .navbar .nav-link:hover, .navbar-brand:hover {
+            color: #ddd !important;
+        }
+
+        /* Card headers */
+        .card-header {
+            color: #f0f0f0 !important;
+        }
+
+        /* Headings inside cards or page */
+        h1, h2, h3, h4, h5, h6 {
+            color: #f0f0f0 !important;
+        }
+
+        /* Paragraphs, labels, list items already handled above */
+
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand" href="/">My Project</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/add/">Add Items</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-5">
+    {% block content %}{% endblock %}
+</div>
+
+<footer class="text-center py-3 mt-5" style="color:#aaa;">
+    &copy; 2025 My Project
+</footer>
+
+</body>
+</html>
