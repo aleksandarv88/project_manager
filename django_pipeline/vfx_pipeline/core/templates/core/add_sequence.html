@@ -1,8 +1,14 @@
 {% extends 'core/base.html' %}
+
+{% block title %}Add Sequence{% endblock %}
+
 {% block content %}
 <h1>Add Sequence</h1>
-<form method="post">{% csrf_token %}
+<form method="post" enctype="multipart/form-data">  <!-- important -->
+    {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add</button>
+    <button type="submit">Add Sequence</button>
 </form>
+<a href="{% url 'sequence_list' %}">⬅ Back to Sequences</a>
 {% endblock %}
+

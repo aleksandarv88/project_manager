@@ -4,15 +4,20 @@ from .forms import ProjectForm, AssetForm, SequenceForm, ShotForm
 from django.http import JsonResponse
 import os
 
-def add_project(request):
+# Project
+def add_project(request, pk=None):
+    instance = Project.objects.get(pk=pk) if pk else None
+
     if request.method == 'POST':
-        form = ProjectForm(request.POST, request.FILES)
+        form = ProjectForm(request.POST, request.FILES, instance=instance)
         if form.is_valid():
-            form.save()  # disk folder creation happens in Project.save()
+            form.save()
             return redirect('project_list')
     else:
-        form = ProjectForm()
+        form = ProjectForm(instance=instance)
+
     return render(request, 'core/add_project.html', {'form': form})
+
 
 def delete_project(request, pk):
     project = get_object_or_404(Project, pk=pk)
@@ -40,20 +45,22 @@ def asset_list(request):
         'selected_project': int(project_id) if project_id else None
     })
 
-def add_asset(request):
+def add_asset(request,pk=None):
+    instance = Asset.objects.get(pk=pk) if pk else None
     if request.method == 'POST':
-        form = AssetForm(request.POST, request.FILES)  # ← important: include request.FILES
+        form = AssetForm(request.POST, request.FILES, instance=instance)  # ← important: include request.FILES
         if form.is_valid():
             form.save()
             return redirect('asset_list')
     else:
-        form = AssetForm()
+        form = AssetForm(instance=instance)
     return render(request, 'core/add_asset.html', {'form': form})
 
 def delete_asset(request, asset_id):
     asset = get_object_or_404(Asset, id=asset_id)
     asset.delete()
     return redirect('asset_list')
+
 
 
 # Sequence views
@@ -69,26 +76,33 @@ def list_sequences(request):
         'selected_project': project_id
     })
 
-def add_sequence(request):
+def add_sequence(request,pk=None):
+    instance = Sequence.objects.get(pk=pk) if pk else None
     if request.method == 'POST':
-        form = SequenceForm(request.POST)
+        form = SequenceForm(request.POST, request.FILES,instance=instance)  # <-- Add request.FILES here
         if form.is_valid():
             form.save()
             return redirect('sequence_list')
     else:
-        form = SequenceForm()
+        form = SequenceForm(instance=instance)
     return render(request, 'core/add_sequence.html', {'form': form})
+
+def delete_sequence(request, pk):
+    seq = get_object_or_404(Sequence, pk=pk)
+    seq.delete()  # this will also call DiskFolderMixin logic if implemented
+    return redirect('sequence_list')
 
 # Shot views
 # List shots with project and sequence filtering
-def add_shot(request):
+def add_shot(request,pk=None):
+    instance = Shot.objects.get(pk=pk) if pk else None
     if request.method == 'POST':
-        form = ShotForm(request.POST, request.FILES)
+        form = ShotForm(request.POST, request.FILES,instance=instance)
         if form.is_valid():
             form.save()  # <- this writes to the DB
             return redirect('shot_list')
     else:
-        form = ShotForm()
+        form = ShotForm(instance=instance)
 
     projects = Project.objects.all()
     sequences = Sequence.objects.all()
@@ -121,6 +135,11 @@ def list_shots(request):
         'selected_sequence': sequence_id,
     }
     return render(request, "core/shot_list.html", context)
+# Delete Shot
+def delete_shot(request, pk):
+    shot = get_object_or_404(Shot, pk=pk)
+    shot.delete()  # same for disk if mixin handles it
+    return redirect('shot_list')
 
 def api_sequences(request):
     project_id = request.GET.get('project_id')
@@ -130,13 +149,4 @@ def api_sequences(request):
     return JsonResponse(list(sequences), safe=False)
 
 
-def delete_sequence(request, pk):
-    seq = get_object_or_404(Sequence, pk=pk)
-    seq.delete()  # this will also call DiskFolderMixin logic if implemented
-    return redirect('sequence_list')
 
-# Delete Shot
-def delete_shot(request, pk):
-    shot = get_object_or_404(Shot, pk=pk)
-    shot.delete()  # same for disk if mixin handles it
-    return redirect('shot_list')

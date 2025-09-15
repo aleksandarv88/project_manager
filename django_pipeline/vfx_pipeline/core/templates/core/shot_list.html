@@ -1,4 +1,4 @@
-{% extends "core/base.html" %}
+{% extends 'core/base.html' %}
 {% block title %}Shots{% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
 <form id="filter_form" method="get">
     <label>Project:</label>
     <select name="project" id="project_select">
-        <option value="">All Projects</option>
+        <option value="">All</option>
         {% for project in projects %}
             <option value="{{ project.id }}" {% if project.id|stringformat:"s" == selected_project %}selected{% endif %}>
                 {{ project.name }}
@@ -18,7 +18,7 @@
 
     <label>Sequence:</label>
     <select name="sequence" id="sequence_select">
-        <option value="">All Sequences</option>
+        <option value="">All</option>
         {% for seq in sequences %}
             {% if not selected_project or seq.project.id|stringformat:"s" == selected_project %}
                 <option value="{{ seq.id }}" {% if seq.id|stringformat:"s" == selected_sequence %}selected{% endif %}>
@@ -31,17 +31,26 @@
 
 <ul>
     {% for shot in shots %}
-    <li class="asset-card">
-        {{ shot.name }}
-        <br>Project: {{ shot.project.name }}
-        <br>Sequence: {{ shot.sequence.name }}
-        {% if shot.image %}
-            <br><img src="{{ shot.image.url }}" alt="{{ shot.name }}" width="150">
-        {% endif %}
-        <br><a href="{% url 'delete_shot' shot.id %}">❌ Delete</a>
+    <li class="list-card">
+        <a href="{% url 'edit_shot' shot.id %}" class="card-link" style="
+            display: block;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            padding: 15px;
+        ">
+            {{ shot.name }}
+            <br>Project: {{ shot.project.name }}
+            <br>Sequence: {{ shot.sequence.name }}
+            {% if shot.image %}
+                <br><img src="{{ shot.image.url }}" alt="{{ shot.name }}" width="100">
+            {% endif %}
+        </a>
+        <a href="{% url 'delete_shot' shot.id %}" class="delete-btn">❌ Delete</a>
     </li>
     {% empty %}
-        <p>No shots found.</p>
+        <li>No shots found.</li>
     {% endfor %}
 </ul>
 

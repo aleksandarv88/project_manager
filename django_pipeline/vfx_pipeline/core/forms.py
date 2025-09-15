@@ -17,7 +17,7 @@ class AssetForm(forms.ModelForm):
 class SequenceForm(forms.ModelForm):
     class Meta:
         model = Sequence
-        fields = ['project', 'name', 'image',]
+        fields = ['project', 'name', 'image']
         
 
 class ShotForm(forms.ModelForm):

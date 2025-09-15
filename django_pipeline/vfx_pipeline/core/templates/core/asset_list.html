@@ -1,5 +1,4 @@
 {% extends 'core/base.html' %}
-
 {% block title %}Assets{% endblock %}
 
 {% block content %}
@@ -20,19 +19,27 @@
 
 <ul>
     {% for asset in assets %}
-    <li class="asset-card">
-        {{ asset.name }} ({{ asset.asset_type }})
-        {% if asset.project %}
-            <br>Project: {{ asset.project.name }}
-        {% endif %}
-        {% if asset.image %}
-            <br><img src="{{ asset.image.url }}" alt="{{ asset.name }}" width="150">
-        {% endif %}
-        <br>
-        <a href="{% url 'delete_asset' asset.id %}">❌ Delete</a>
+    <li class="list-card">
+        <a href="{% url 'edit_asset' asset.id %}" class="card-link" style="
+            display: block;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            padding: 15px;
+        ">
+            {{ asset.name }} ({{ asset.asset_type }})
+            {% if asset.project %}
+                <br>Project: {{ asset.project.name }}
+            {% endif %}
+            {% if asset.image %}
+                <br><img src="{{ asset.image.url }}" alt="{{ asset.name }}" width="150">
+            {% endif %}
+        </a>
+        <a href="{% url 'delete_asset' asset.id %}" class="delete-btn">❌ Delete</a>
     </li>
     {% empty %}
-    <p>No assets yet.</p>
+        <li>No assets yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

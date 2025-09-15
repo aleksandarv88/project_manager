@@ -10,25 +10,36 @@
     <select name="project" id="project" onchange="this.form.submit()">
         <option value="">All Projects</option>
         {% for project in projects %}
-        <option value="{{ project.id }}" {% if selected_project == project.id|stringformat:"s" %}selected{% endif %}>
-            {{ project.name }}
-        </option>
+            <option value="{{ project.id }}" {% if selected_project == project.id|stringformat:"s" %}selected{% endif %}>
+                {{ project.name }}
+            </option>
         {% endfor %}
     </select>
 </form>
 
 <ul>
     {% for sequence in sequences %}
-    <li class="asset-card">
-        {{ sequence.name }}
-        <br>Project: {{ sequence.project.name }}
-        {% if sequence.image %}
-            <br><img src="{{ sequence.image.url }}" alt="{{ sequence.name }}" width="150">
-        {% endif %}
-        <br><a href="{% url 'delete_sequence' sequence.id %}">❌ Delete</a>
+    <li class="list-card">
+        <a href="{% url 'edit_sequence' sequence.id %}" class="card-link" style="
+            display: block;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            padding: 15px;
+        ">
+            {{ sequence.name }}
+            {% if sequence.project %}
+                <br>Project: {{ sequence.project.name }}
+            {% endif %}
+            {% if sequence.image %}
+                <br><img src="{{ sequence.image.url }}" alt="{{ sequence.name }}" width="150">
+            {% endif %}
+        </a>
+        <a href="{% url 'delete_sequence' sequence.id %}" class="delete-btn">❌ Delete</a>
     </li>
     {% empty %}
-        <p>No sequences yet.</p>
+        <li>No sequences yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

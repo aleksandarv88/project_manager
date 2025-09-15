@@ -5,19 +5,27 @@
 {% block content %}
 <h1>Projects</h1>
 <a href="{% url 'add_project' %}">➕ Add Project</a>
+
 <ul>
     {% for project in projects %}
-    <li class="project-card">
-        {{ project.name }}
-        {% if project.image %}
-            <br>
-            <img src="{{ project.image.url }}" alt="{{ project.name }}" width="150">
-        {% endif %}
-        <br>
-        <a href="{% url 'delete_project' project.id %}">❌ Delete</a>
+    <li class="list-card">
+        <a href="{% url 'edit_project' project.id %}" class="card-link" style="
+            display: block;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            padding: 15px;
+        ">
+            {{ project.name }}
+            {% if project.image %}
+                <br><img src="{{ project.image.url }}" width="150">
+            {% endif %}
+        </a>
+        <a href="{% url 'delete_project' project.id %}" class="delete-btn">❌ Delete</a>
     </li>
     {% empty %}
-    <p>No projects yet.</p>
+    <li>No projects yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}
