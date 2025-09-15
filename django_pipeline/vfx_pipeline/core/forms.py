@@ -4,7 +4,10 @@ from .models import Project, Asset, Sequence, Shot
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ["name", "image"]  # adjust based on your Project model fields
+        fields = ['name', 'image', 'base_path']  # add base_path here
+        widgets = {
+            'base_path': forms.TextInput(attrs={'value': 'D:\\', 'size': 50})
+        }
 
 class AssetForm(forms.ModelForm):
     class Meta:
@@ -14,9 +17,23 @@ class AssetForm(forms.ModelForm):
 class SequenceForm(forms.ModelForm):
     class Meta:
         model = Sequence
-        fields = ['project', 'name']
+        fields = ['project', 'name', 'image',]
+        
 
 class ShotForm(forms.ModelForm):
     class Meta:
         model = Shot
-        fields = ['sequence', 'name', 'image']
+        fields = ['project', 'sequence', 'name', 'image']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['sequence'].queryset = Sequence.objects.none()
+
+        if 'project' in self.data:
+            try:
+                project_id = int(self.data.get('project'))
+                self.fields['sequence'].queryset = Sequence.objects.filter(project_id=project_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk:
+            self.fields['sequence'].queryset = self.instance.project.sequences.all()

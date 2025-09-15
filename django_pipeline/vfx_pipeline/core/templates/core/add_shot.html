@@ -1,8 +1,33 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
 {% block content %}
 <h1>Add Shot</h1>
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add</button>
+    <button type="submit">Add Shot</button>
 </form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $("#id_project").change(function() {
+        var projectId = $(this).val();
+        $.ajax({
+            url: "{% url 'api_sequences' %}",
+            data: {
+                'project_id': projectId
+            },
+            success: function(data) {
+                var select = $("#id_sequence");
+                select.empty();
+                select.append('<option value="">---------</option>');
+                data.forEach(function(seq) {
+                    select.append('<option value="' + seq.id + '">' + seq.name + '</option>');
+                });
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

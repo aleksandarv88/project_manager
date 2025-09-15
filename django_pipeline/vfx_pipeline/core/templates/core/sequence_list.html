@@ -1,25 +1,34 @@
 {% extends 'core/base.html' %}
+{% block title %}Sequences{% endblock %}
+
 {% block content %}
 <h1>Sequences</h1>
+<a href="{% url 'add_sequence' %}">➕ Add Sequence</a>
 
 <form method="get">
-    <select name="project" onchange="this.form.submit()">
+    <label for="project">Filter by Project:</label>
+    <select name="project" id="project" onchange="this.form.submit()">
         <option value="">All Projects</option>
         {% for project in projects %}
-        <option value="{{ project.id }}" {% if project.id|stringformat:"s" == selected_project %}selected{% endif %}>
+        <option value="{{ project.id }}" {% if selected_project == project.id|stringformat:"s" %}selected{% endif %}>
             {{ project.name }}
         </option>
         {% endfor %}
     </select>
 </form>
 
-<a href="{% url 'add_sequence' %}">➕ Add Sequence</a>
-
 <ul>
     {% for sequence in sequences %}
-    <li>{{ sequence.name }} (Project: {{ sequence.project.name }})</li>
+    <li class="asset-card">
+        {{ sequence.name }}
+        <br>Project: {{ sequence.project.name }}
+        {% if sequence.image %}
+            <br><img src="{{ sequence.image.url }}" alt="{{ sequence.name }}" width="150">
+        {% endif %}
+        <br><a href="{% url 'delete_sequence' sequence.id %}">❌ Delete</a>
+    </li>
     {% empty %}
-    <li>No sequences yet.</li>
+        <p>No sequences yet.</p>
     {% endfor %}
 </ul>
 {% endblock %}

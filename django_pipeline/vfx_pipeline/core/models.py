@@ -1,59 +1,113 @@
+# /vfx_pipeline/core/models.py
 import os
 import shutil
-from django.conf import settings
 from django.db import models
 
-class Project(models.Model):
-    name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='projects/', blank=True, null=True)
+DEFAULT_BASE_PATH = r"D:\\"  # default base path for projects
 
-    # base path on disk (can be set before creating)
-    base_path = os.path.join(settings.MEDIA_ROOT, 'projects')
+# -------------------------
+# Helper Mixin for disk folders
+# -------------------------
+class DiskFolderMixin(models.Model):
+    class Meta:
+        abstract = True
+
+    folder_name = ""
+
+    def get_folder_path(self):
+        """Return the full path on disk for this object."""
+        parent_path = getattr(self, "parent_path", DEFAULT_BASE_PATH)
+        return os.path.join(parent_path, self.folder_name)
 
     def save(self, *args, **kwargs):
-        # Save DB entry first
         super().save(*args, **kwargs)
-        # Create folder on disk
-        folder_path = os.path.join(self.base_path, self.name)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+        # create folder after saving
+        folder_path = self.get_folder_path()
+        os.makedirs(folder_path, exist_ok=True)
 
     def delete(self, *args, **kwargs):
-        # Delete folder on disk
-        folder_path = os.path.join(self.base_path, self.name)
+        folder_path = self.get_folder_path()
         if os.path.exists(folder_path):
             shutil.rmtree(folder_path)
-        # Delete DB entry
         super().delete(*args, **kwargs)
 
-class Asset(models.Model):
+# -------------------------
+# Project
+# -------------------------
+# models.py
+class Project(DiskFolderMixin, models.Model):
+    name = models.CharField(max_length=100)
+    base_path = models.CharField(max_length=255, default=DEFAULT_BASE_PATH)
+    image = models.ImageField(upload_to='projects', blank=True, null=True)  # add this
+
+    folder_name = property(lambda self: self.name)
+
+    @property
+    def parent_path(self):
+        return self.base_path
+
+    def __str__(self):
+        return self.name
+
+    # Optionally, create folders automatically
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Create assets and sequences folders
+        os.makedirs(os.path.join(self.get_folder_path(), 'assets'), exist_ok=True)
+        os.makedirs(os.path.join(self.get_folder_path(), 'sequences'), exist_ok=True)
+
+# -------------------------
+# Asset
+# -------------------------
+class Asset(DiskFolderMixin, models.Model):
     ASSET_TYPES = [
-        ('CHAR', 'Character'),
-        ('PROP', 'Prop'),
-        ('SET', 'Set'),
-        ('VEH', 'Vehicle'),
+        ('props', 'Props'),
+        ('env', 'Environment'),
+        ('vehicle', 'Vehicle'),
+        ('fx', 'FX'),
+        ('other', 'Other'),
     ]
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="assets")
     name = models.CharField(max_length=100)
-    asset_type = models.CharField(max_length=10, choices=ASSET_TYPES, default='PROP')
-    image = models.ImageField(upload_to='assets/', null=True, blank=True)
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPES, default='other')
+    image = models.ImageField(upload_to="assets", blank=True, null=True)
+
+    folder_name = property(lambda self: self.name)
+
+    @property
+    def parent_path(self):
+        return os.path.join(self.project.get_folder_path(), "assets")
 
     def __str__(self):
-        return f"{self.name} ({self.project.name})"
-
-
-class Sequence(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='sequences')
+        return self.name
+# -------------------------
+# Sequence
+# -------------------------
+class Sequence(DiskFolderMixin, models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="sequences")
     name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to="seq", blank=True, null=True)
+    folder_name = property(lambda self: self.name)
+
+    @property
+    def parent_path(self):
+        return os.path.join(self.project.get_folder_path(), "sequences")
 
     def __str__(self):
-        return f"{self.project.name} - {self.name}"
+        return self.name
 
-class Shot(models.Model):
-    sequence = models.ForeignKey(Sequence, on_delete=models.CASCADE, related_name='shots')
+
+class Shot(DiskFolderMixin, models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="shots")
+    sequence = models.ForeignKey(Sequence, on_delete=models.CASCADE, related_name="shots")
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='shots/', blank=True, null=True)  # optional
+    image = models.ImageField(upload_to="shot", blank=True, null=True)
+    folder_name = property(lambda self: self.name)
+
+    @property
+    def parent_path(self):
+        return os.path.join(self.sequence.get_folder_path(), "shots")
 
     def __str__(self):
-        return f"{self.sequence.name} - {self.name}"
+        return self.name

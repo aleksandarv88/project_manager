@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Project, Asset, Sequence, Shot
 from .forms import ProjectForm, AssetForm, SequenceForm, ShotForm
+from django.http import JsonResponse
 import os
 
 def add_project(request):
@@ -23,9 +24,6 @@ def delete_project(request, pk):
 def project_list(request):
     projects = Project.objects.all()
     return render(request, "core/project_list.html", {"projects": projects})
-
-
-
 
 def asset_list(request):
     project_id = request.GET.get('project')  # get selected project from query param
@@ -82,24 +80,63 @@ def add_sequence(request):
     return render(request, 'core/add_sequence.html', {'form': form})
 
 # Shot views
-def list_shots(request):
-    sequence_id = request.GET.get('sequence')
-    sequences = Sequence.objects.all()
-    shots = Shot.objects.all()
-    if sequence_id:
-        shots = shots.filter(sequence_id=sequence_id)
-    return render(request, 'core/shot_list.html', {
-        'sequences': sequences,
-        'shots': shots,
-        'selected_sequence': sequence_id
-    })
-
+# List shots with project and sequence filtering
 def add_shot(request):
     if request.method == 'POST':
         form = ShotForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            form.save()  # <- this writes to the DB
             return redirect('shot_list')
     else:
         form = ShotForm()
-    return render(request, 'core/add_shot.html', {'form': form})
+
+    projects = Project.objects.all()
+    sequences = Sequence.objects.all()
+
+    return render(request, 'core/add_shot.html', {
+        'form': form,
+        'projects': projects,
+        'sequences': sequences,
+    })
+
+def list_shots(request):
+    project_id = request.GET.get('project')
+    sequence_id = request.GET.get('sequence')
+
+    shots = Shot.objects.all()
+
+    if project_id:
+        shots = shots.filter(project_id=project_id)
+    if sequence_id:
+        shots = shots.filter(sequence_id=sequence_id)
+
+    projects = Project.objects.all()
+    sequences = Sequence.objects.all()
+
+    context = {
+        'shots': shots,
+        'projects': projects,
+        'sequences': sequences,
+        'selected_project': project_id,
+        'selected_sequence': sequence_id,
+    }
+    return render(request, "core/shot_list.html", context)
+
+def api_sequences(request):
+    project_id = request.GET.get('project_id')
+    if not project_id:
+        return JsonResponse([], safe=False)
+    sequences = Sequence.objects.filter(project_id=project_id).values('id', 'name')
+    return JsonResponse(list(sequences), safe=False)
+
+
+def delete_sequence(request, pk):
+    seq = get_object_or_404(Sequence, pk=pk)
+    seq.delete()  # this will also call DiskFolderMixin logic if implemented
+    return redirect('sequence_list')
+
+# Delete Shot
+def delete_shot(request, pk):
+    shot = get_object_or_404(Shot, pk=pk)
+    shot.delete()  # same for disk if mixin handles it
+    return redirect('shot_list')

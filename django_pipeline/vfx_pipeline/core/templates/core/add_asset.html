@@ -4,10 +4,35 @@
 
 {% block content %}
 <h1>Add Asset</h1>
-<form method="post" enctype="multipart/form-data">  <!-- ← important: enctype -->
+
+<form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form.as_p }}
+
+    <p>
+        Project: {{ form.project }}
+    </p>
+
+    <p>
+        Name: {{ form.name }}
+    </p>
+
+    <p>
+        Asset Type:
+        <select name="asset_type">
+            <option value="props" {% if form.asset_type.value == "props" %}selected{% endif %}>props</option>
+            <option value="env" {% if form.asset_type.value == "env" %}selected{% endif %}>env</option>
+            <option value="vehicle" {% if form.asset_type.value == "vehicle" %}selected{% endif %}>vehicle</option>
+            <option value="fx" {% if form.asset_type.value == "fx" %}selected{% endif %}>fx</option>
+            <option value="other" {% if form.asset_type.value == "other" %}selected{% endif %}>other</option>
+        </select>
+    </p>
+
+    <p>
+        Image: {{ form.image }}
+    </p>
+
     <button type="submit">Add Asset</button>
 </form>
-<a href="{% url 'asset_list' %}">⬅ Back to Assets</a>
+
+<p><a href="{% url 'asset_list' %}">⬅ Back to Assets</a></p>
 {% endblock %}

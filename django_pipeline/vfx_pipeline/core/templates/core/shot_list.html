@@ -1,29 +1,56 @@
-{% extends 'core/base.html' %}
+{% extends "core/base.html" %}
+{% block title %}Shots{% endblock %}
+
 {% block content %}
 <h1>Shots</h1>
+<a href="{% url 'add_shot' %}">➕ Add Shot</a>
 
-<form method="get">
-    <select name="sequence" onchange="this.form.submit()">
+<form id="filter_form" method="get">
+    <label>Project:</label>
+    <select name="project" id="project_select">
+        <option value="">All Projects</option>
+        {% for project in projects %}
+            <option value="{{ project.id }}" {% if project.id|stringformat:"s" == selected_project %}selected{% endif %}>
+                {{ project.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label>Sequence:</label>
+    <select name="sequence" id="sequence_select">
         <option value="">All Sequences</option>
-        {% for sequence in sequences %}
-        <option value="{{ sequence.id }}" {% if sequence.id|stringformat:"s" == selected_sequence %}selected{% endif %}>
-            {{ sequence.name }}
-        </option>
+        {% for seq in sequences %}
+            {% if not selected_project or seq.project.id|stringformat:"s" == selected_project %}
+                <option value="{{ seq.id }}" {% if seq.id|stringformat:"s" == selected_sequence %}selected{% endif %}>
+                    {{ seq.name }}
+                </option>
+            {% endif %}
         {% endfor %}
     </select>
 </form>
 
-<a href="{% url 'add_shot' %}">➕ Add Shot</a>
-
 <ul>
     {% for shot in shots %}
-    <li>{{ shot.name }} (Sequence: {{ shot.sequence.name }})
+    <li class="asset-card">
+        {{ shot.name }}
+        <br>Project: {{ shot.project.name }}
+        <br>Sequence: {{ shot.sequence.name }}
         {% if shot.image %}
-        <img src="{{ shot.image.url }}" width="150">
+            <br><img src="{{ shot.image.url }}" alt="{{ shot.name }}" width="150">
         {% endif %}
+        <br><a href="{% url 'delete_shot' shot.id %}">❌ Delete</a>
     </li>
     {% empty %}
-    <li>No shots yet.</li>
+        <p>No shots found.</p>
     {% endfor %}
 </ul>
+
+<script>
+    document.getElementById('project_select').addEventListener('change', function() {
+        document.getElementById('filter_form').submit();
+    });
+    document.getElementById('sequence_select').addEventListener('change', function() {
+        document.getElementById('filter_form').submit();
+    });
+</script>
 {% endblock %}
