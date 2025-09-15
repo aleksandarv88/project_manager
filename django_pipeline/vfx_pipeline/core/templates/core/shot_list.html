@@ -1,0 +1,29 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h1>Shots</h1>
+
+<form method="get">
+    <select name="sequence" onchange="this.form.submit()">
+        <option value="">All Sequences</option>
+        {% for sequence in sequences %}
+        <option value="{{ sequence.id }}" {% if sequence.id|stringformat:"s" == selected_sequence %}selected{% endif %}>
+            {{ sequence.name }}
+        </option>
+        {% endfor %}
+    </select>
+</form>
+
+<a href="{% url 'add_shot' %}">➕ Add Shot</a>
+
+<ul>
+    {% for shot in shots %}
+    <li>{{ shot.name }} (Sequence: {{ shot.sequence.name }})
+        {% if shot.image %}
+        <img src="{{ shot.image.url }}" width="150">
+        {% endif %}
+    </li>
+    {% empty %}
+    <li>No shots yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

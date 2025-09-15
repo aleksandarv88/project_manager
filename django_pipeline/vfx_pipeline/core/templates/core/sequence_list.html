@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h1>Sequences</h1>
+
+<form method="get">
+    <select name="project" onchange="this.form.submit()">
+        <option value="">All Projects</option>
+        {% for project in projects %}
+        <option value="{{ project.id }}" {% if project.id|stringformat:"s" == selected_project %}selected{% endif %}>
+            {{ project.name }}
+        </option>
+        {% endfor %}
+    </select>
+</form>
+
+<a href="{% url 'add_sequence' %}">➕ Add Sequence</a>
+
+<ul>
+    {% for sequence in sequences %}
+    <li>{{ sequence.name }} (Project: {{ sequence.project.name }})</li>
+    {% empty %}
+    <li>No sequences yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

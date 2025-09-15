@@ -1,0 +1,13 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Add Project{% endblock %}
+
+{% block content %}
+<h1>Add Project</h1>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Project</button>
+</form>
+<a href="{% url 'project_list' %}">⬅ Back to Projects</a>
+{% endblock %}

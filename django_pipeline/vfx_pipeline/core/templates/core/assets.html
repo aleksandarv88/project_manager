@@ -1,0 +1,9 @@
+<h2>Assets for {{ project.name }}</h2>
+<a href="{% url 'add_asset' project.id %}">➕ Add Asset</a>
+<ul>
+{% for asset in assets %}
+<li>{{ asset.name }} ({{ asset.asset_type }})</li>
+{% empty %}
+<p>No assets yet.</p>
+{% endfor %}
+</ul>

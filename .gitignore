@@ -2,3 +2,5 @@ django_pipeline/venv/
 django_pipeline/__pycache__/
 django_pipeline/*.pyc
 django_pipeline/.DS_Store
+__pycache__/
+.vscode

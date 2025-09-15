@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Assets{% endblock %}
+
+{% block content %}
+<h1>Assets</h1>
+<a href="{% url 'add_asset' %}">➕ Add Asset</a>
+
+<form method="get">
+    <label for="project">Filter by Project:</label>
+    <select name="project" id="project" onchange="this.form.submit()">
+        <option value="">All Projects</option>
+        {% for project in projects %}
+            <option value="{{ project.id }}" {% if selected_project == project.id %}selected{% endif %}>
+                {{ project.name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+<ul>
+    {% for asset in assets %}
+    <li class="asset-card">
+        {{ asset.name }} ({{ asset.asset_type }})
+        {% if asset.project %}
+            <br>Project: {{ asset.project.name }}
+        {% endif %}
+        {% if asset.image %}
+            <br><img src="{{ asset.image.url }}" alt="{{ asset.name }}" width="150">
+        {% endif %}
+        <br>
+        <a href="{% url 'delete_asset' asset.id %}">❌ Delete</a>
+    </li>
+    {% empty %}
+    <p>No assets yet.</p>
+    {% endfor %}
+</ul>
+{% endblock %}

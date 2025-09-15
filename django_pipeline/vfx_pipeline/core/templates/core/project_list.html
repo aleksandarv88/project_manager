@@ -1,0 +1,23 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<h1>Projects</h1>
+<a href="{% url 'add_project' %}">➕ Add Project</a>
+<ul>
+    {% for project in projects %}
+    <li class="project-card">
+        {{ project.name }}
+        {% if project.image %}
+            <br>
+            <img src="{{ project.image.url }}" alt="{{ project.name }}" width="150">
+        {% endif %}
+        <br>
+        <a href="{% url 'delete_project' project.id %}">❌ Delete</a>
+    </li>
+    {% empty %}
+    <p>No projects yet.</p>
+    {% endfor %}
+</ul>
+{% endblock %}
