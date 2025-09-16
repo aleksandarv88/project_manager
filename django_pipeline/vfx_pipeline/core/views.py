@@ -56,12 +56,10 @@ def add_asset(request,pk=None):
         form = AssetForm(instance=instance)
     return render(request, 'core/add_asset.html', {'form': form})
 
-def delete_asset(request, asset_id):
-    asset = get_object_or_404(Asset, id=asset_id)
+def delete_asset(request, pk):
+    asset = get_object_or_404(Asset, pk=pk)
     asset.delete()
-    return redirect('asset_list')
-
-
+    return redirect("asset_list")  # or wherever you want to go after deletion
 
 # Sequence views
 def list_sequences(request):

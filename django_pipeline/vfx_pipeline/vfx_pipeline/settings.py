@@ -35,8 +35,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Application definition
+# settings.py
 
+ASSET_DEPARTMENTS = [
+    "anim",
+    "env",
+    "fx",
+    "layout",
+    "lgt",
+    "mod",
+    "cfx",
+    "ldev",
+]
+
+ASSET_SOFTWARES = [
+    "houdini",
+    "maya",
+]
+
+
+
+PIPELINE_ROOT = r"D:\Work\Houdini\USD\pT"
+
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
