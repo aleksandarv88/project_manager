@@ -1,0 +1,204 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Artist Manager{% endblock %}
+
+{% block content %}
+<style>
+  .artist-manager-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  .artist-manager-left {
+    flex: 1;
+  }
+  .artist-manager-right {
+    flex: 2;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    color: #000;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 5px;
+    text-align: left;
+  }
+  th {
+    background: #ddd;
+  }
+  .artist-header {
+    background-color: #f2f2f2;
+    cursor: pointer;
+  }
+  .toggle-icon {
+    margin-right: 0.5rem;
+    font-weight: bold;
+  }
+  .btn {
+    padding: 3px 6px;
+    cursor: pointer;
+  }
+  .btn-danger {
+    background: #d9534f;
+    color: white;
+    border: none;
+  }
+  .btn-secondary {
+    background: #5bc0de;
+    color: white;
+    border: none;
+  }
+  /* new: status colours */
+  .task-row.green {
+    background-color: #d4edda; /* light green */
+  }
+  .task-row.orange {
+    background-color: #fff3cd; /* light orange */
+  }
+</style>
+
+<h1>Artist Manager</h1>
+
+<div class="artist-manager-container">
+  <!-- Left column: forms -->
+  <div class="artist-manager-left">
+    <h2>Add Artist</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ artist_form.as_p }}
+      <input type="hidden" name="open_artists" id="open_artists_left">
+      <button type="submit" name="add_artist" class="btn btn-secondary">Add Artist</button>
+    </form>
+
+    <h2>Add Task</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ task_form.as_p }}
+      <input type="hidden" name="open_artists" id="open_artists_right">
+      <button type="submit" name="add_task" class="btn btn-secondary">Add Task</button>
+    </form>
+  </div>
+
+  <!-- Right column: tasks grouped by artist -->
+  <div class="artist-manager-right">
+    <h2>Artists &amp; Tasks</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Shot</th>
+          <th>Task Type</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for artist in artists %}
+          <!-- Artist header row -->
+          <tr class="artist-header" data-artist="{{ artist.id }}">
+            <td colspan="6">
+              <span class="toggle-icon">+</span>
+              <strong>{{ artist.username }}</strong>
+            </td>
+          </tr>
+          {% for task in artist.tasks.all %}
+            <tr class="task-row artist-{{ artist.id }} green"
+                data-task-id="{{ task.id }}"
+                style="display:none;">
+              <td>{% if task.asset %}{{ task.asset.name }}{% else %}-{% endif %}</td>
+              <td>{% if task.shot %}{{ task.shot.name }}{% else %}-{% endif %}</td>
+              <td>{{ task.task_type }}</td>
+              <td>{{ task.description }}</td>
+              <td>
+                <form action="{% url 'update_task_status' task.id %}" method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="open_artists" class="open-artists-input">
+                  <select name="status">
+                    {% for code,label in task.STATUS_CHOICES %}
+                      <option value="{{ code }}" {% if code == task.status %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-secondary">Update</button>
+                </form>
+              </td>
+              <td>
+                <form action="{% url 'delete_task' task.id %}" method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="open_artists" class="open-artists-input">
+                  <button type="submit" class="btn btn-danger"
+                          onclick="return confirm('Are you sure you want to delete this task?');">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr class="task-row artist-{{ artist.id }} green" style="display:none;">
+              <td colspan="6">No tasks assigned</td>
+            </tr>
+          {% endfor %}
+        {% empty %}
+          <tr>
+            <td colspan="6">No artists yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const openArtists = new Set();
+
+    // toggle script for each artist header
+    document.querySelectorAll('.artist-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const artistId = header.getAttribute('data-artist');
+        const icon = header.querySelector('.toggle-icon');
+        const rows = document.querySelectorAll('.artist-' + artistId);
+        const isHidden = [...rows].every(row => row.style.display === 'none');
+        rows.forEach(row => {
+          row.style.display = isHidden ? 'table-row' : 'none';
+        });
+        icon.textContent = isHidden ? '−' : '+';
+        if (isHidden) {
+          openArtists.add(artistId);
+        } else {
+          openArtists.delete(artistId);
+        }
+        // update hidden fields
+        document.querySelectorAll('#open_artists_left, #open_artists_right, .open-artists-input')
+          .forEach(input => input.value = Array.from(openArtists).join(','));
+      });
+    });
+
+    // auto-expand from ?open= param
+    const params = new URLSearchParams(window.location.search);
+    const open = params.get('open');
+    if (open) {
+      open.split(',').forEach(id => {
+        document.querySelectorAll('.artist-' + id).forEach(row => row.style.display = 'table-row');
+        const icon = document.querySelector('.artist-header[data-artist="' + id + '"] .toggle-icon');
+        if (icon) icon.textContent = '−';
+        openArtists.add(id);
+      });
+      document.querySelectorAll('#open_artists_left, #open_artists_right, .open-artists-input')
+        .forEach(input => input.value = Array.from(openArtists).join(','));
+    }
+
+    // mark row orange when status changed
+    document.querySelectorAll('.task-row select[name="status"]').forEach(select => {
+      select.addEventListener('change', () => {
+        const row = select.closest('.task-row');
+        row.classList.remove('green');
+        row.classList.add('orange');
+      });
+    });
+  });
+</script>
+{% endblock %}

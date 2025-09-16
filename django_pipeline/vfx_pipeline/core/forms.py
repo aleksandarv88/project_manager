@@ -1,5 +1,5 @@
 from django import forms
-from .models import Project, Asset, Sequence, Shot
+from .models import Project, Asset, Sequence, Shot, Artist, Task
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -37,3 +37,13 @@ class ShotForm(forms.ModelForm):
                 pass
         elif self.instance.pk:
             self.fields['sequence'].queryset = self.instance.project.sequences.all()
+
+class ArtistForm(forms.ModelForm):
+    class Meta:
+        model = Artist
+        fields = ["username"]
+
+class TaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ["artist", "asset", "sequence", "shot", "task_type", "description", "status"]

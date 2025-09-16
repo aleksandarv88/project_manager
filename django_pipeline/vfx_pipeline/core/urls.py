@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from core.views.artist_views import artist_manager, update_task_status,delete_task
+
 
 urlpatterns = [
 
@@ -29,6 +31,12 @@ urlpatterns = [
     path('shots/add/', views.add_shot, name='add_shot'),
     path('shots/delete/<int:pk>/', views.delete_shot, name='delete_shot'),
     path('shots/edit/<int:pk>/', views.add_shot, name='edit_shot'),
+
+    path("artists/", artist_manager, name="artist_manager"),
+    path("tasks/<int:task_id>/status/", update_task_status, name="update_task_status"),
+    path("tasks/<int:task_id>/delete/", delete_task, name="delete_task"),
+
+
 
 
     # API
