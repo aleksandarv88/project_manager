@@ -1,13 +1,24 @@
 {% extends 'core/base.html' %}
-
 {% block title %}Add Project{% endblock %}
-
 {% block content %}
-<h1>Add Project</h1>
-<form method="POST" enctype="multipart/form-data">
+<div class="form-card">
+  <h2>Add Project</h2>
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Add Project</button>
-</form>
-<a href="{% url 'project_list' %}">⬅ Back to Projects</a>
+    <div class="form-group">
+      <label for="id_name">Project Name</label>
+      {{ form.name }}
+    </div>
+    <div class="form-group">
+      <label for="id_base_path">Base Path</label>
+      {{ form.base_path }}
+    </div>
+    <div class="form-group">
+      <label for="id_image">Image</label>
+      {{ form.image }}
+    </div>
+    <button type="submit" class="btn btn-secondary">Add Project</button>
+  </form>
+  <p><a href="{% url 'project_list' %}">⬅ Back to Projects</a></p>
+</div>
 {% endblock %}

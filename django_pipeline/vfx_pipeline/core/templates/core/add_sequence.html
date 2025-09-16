@@ -1,14 +1,24 @@
 {% extends 'core/base.html' %}
-
 {% block title %}Add Sequence{% endblock %}
-
 {% block content %}
-<h1>Add Sequence</h1>
-<form method="post" enctype="multipart/form-data">  <!-- important -->
+<div class="form-card">
+  <h2>Add Sequence</h2>
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Add Sequence</button>
-</form>
-<a href="{% url 'sequence_list' %}">⬅ Back to Sequences</a>
+    <div class="form-group">
+      <label for="id_project">Project</label>
+      {{ form.project }}
+    </div>
+    <div class="form-group">
+      <label for="id_name">Sequence Name</label>
+      {{ form.name }}
+    </div>
+    <div class="form-group">
+      <label for="id_image">Image</label>
+      {{ form.image }}
+    </div>
+    <button type="submit" class="btn btn-secondary">Add Sequence</button>
+  </form>
+  <p><a href="{% url 'sequence_list' %}">⬅ Back to Sequences</a></p>
+</div>
 {% endblock %}
-

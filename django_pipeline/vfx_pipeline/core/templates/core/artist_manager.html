@@ -11,52 +11,80 @@
   }
   .artist-manager-left {
     flex: 1;
+    background: #3a3a3a;
+    padding: 15px;
+    border-radius: 8px;
   }
   .artist-manager-right {
     flex: 2;
   }
+  .artist-manager-left h2,
+  .artist-manager-right h2 {
+    margin-top: 0;
+    color: #fff;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+    color: #fff;
+  }
+  select,
+  textarea,
+  input[type="text"] {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #2b2b2b;
+    color: #fff;
+  }
+  .btn {
+    padding: 4px 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+  }
+  .btn-danger {
+    background: #d9534f;
+    color: white;
+  }
+  .btn-secondary {
+    background: #5bc0de;
+    color: white;
+  }
   table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
-    color: #000;
+    background: #3a3a3a;
+    color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
   }
   th, td {
-    border: 1px solid #ccc;
+    border: 1px solid #555;
     padding: 5px;
     text-align: left;
   }
   th {
-    background: #ddd;
+    background: #1c1c1c;
   }
   .artist-header {
-    background-color: #f2f2f2;
+    background-color: #444;
     cursor: pointer;
   }
   .toggle-icon {
     margin-right: 0.5rem;
     font-weight: bold;
   }
-  .btn {
-    padding: 3px 6px;
-    cursor: pointer;
-  }
-  .btn-danger {
-    background: #d9534f;
-    color: white;
-    border: none;
-  }
-  .btn-secondary {
-    background: #5bc0de;
-    color: white;
-    border: none;
-  }
-  /* new: status colours */
   .task-row.green {
-    background-color: #d4edda; /* light green */
+    background-color: #2f4f2f; /* dark green */
   }
   .task-row.orange {
-    background-color: #fff3cd; /* light orange */
+    background-color: #5a4c1c; /* dark orange */
   }
 </style>
 
@@ -66,17 +94,56 @@
   <!-- Left column: forms -->
   <div class="artist-manager-left">
     <h2>Add Artist</h2>
-    <form method="post">
+    <form method="post" class="add-artist-form">
       {% csrf_token %}
       {{ artist_form.as_p }}
       <input type="hidden" name="open_artists" id="open_artists_left">
       <button type="submit" name="add_artist" class="btn btn-secondary">Add Artist</button>
     </form>
 
-    <h2>Add Task</h2>
-    <form method="post">
+    <h2>Assign Task</h2>
+    <form method="post" class="add-task-form">
       {% csrf_token %}
-      {{ task_form.as_p }}
+
+      <div class="form-group">
+        <label for="id_artist">Artist</label>
+        {{ task_form.artist }}
+      </div>
+
+      <div class="form-group">
+        <label for="assign_type">Assign To</label>
+        <select id="assign_type">
+          <option value="">-- Select --</option>
+          <option value="asset">Asset</option>
+          <option value="shot">Shot</option>
+        </select>
+      </div>
+
+      <div class="form-group asset-field" style="display:none;">
+        <label for="id_asset">Asset</label>
+        {{ task_form.asset }}
+      </div>
+
+      <div class="form-group shot-field" style="display:none;">
+        <label for="id_shot">Shot</label>
+        {{ task_form.shot }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_task_type">Task Type</label>
+        {{ task_form.task_type }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_description">Description</label>
+        {{ task_form.description }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_status">Status</label>
+        {{ task_form.status }}
+      </div>
+
       <input type="hidden" name="open_artists" id="open_artists_right">
       <button type="submit" name="add_task" class="btn btn-secondary">Add Task</button>
     </form>
@@ -98,7 +165,6 @@
       </thead>
       <tbody>
         {% for artist in artists %}
-          <!-- Artist header row -->
           <tr class="artist-header" data-artist="{{ artist.id }}">
             <td colspan="6">
               <span class="toggle-icon">+</span>
@@ -106,9 +172,7 @@
             </td>
           </tr>
           {% for task in artist.tasks.all %}
-            <tr class="task-row artist-{{ artist.id }} green"
-                data-task-id="{{ task.id }}"
-                style="display:none;">
+            <tr class="task-row artist-{{ artist.id }} green" style="display:none;">
               <td>{% if task.asset %}{{ task.asset.name }}{% else %}-{% endif %}</td>
               <td>{% if task.shot %}{{ task.shot.name }}{% else %}-{% endif %}</td>
               <td>{{ task.task_type }}</td>
@@ -155,23 +219,16 @@
   document.addEventListener('DOMContentLoaded', () => {
     const openArtists = new Set();
 
-    // toggle script for each artist header
+    // toggle script
     document.querySelectorAll('.artist-header').forEach(header => {
       header.addEventListener('click', () => {
         const artistId = header.getAttribute('data-artist');
         const icon = header.querySelector('.toggle-icon');
         const rows = document.querySelectorAll('.artist-' + artistId);
         const isHidden = [...rows].every(row => row.style.display === 'none');
-        rows.forEach(row => {
-          row.style.display = isHidden ? 'table-row' : 'none';
-        });
+        rows.forEach(row => row.style.display = isHidden ? 'table-row' : 'none');
         icon.textContent = isHidden ? '−' : '+';
-        if (isHidden) {
-          openArtists.add(artistId);
-        } else {
-          openArtists.delete(artistId);
-        }
-        // update hidden fields
+        if (isHidden) openArtists.add(artistId); else openArtists.delete(artistId);
         document.querySelectorAll('#open_artists_left, #open_artists_right, .open-artists-input')
           .forEach(input => input.value = Array.from(openArtists).join(','));
       });
@@ -198,6 +255,23 @@
         row.classList.remove('green');
         row.classList.add('orange');
       });
+    });
+
+    // show/hide asset/shot fields based on Assign To dropdown
+    const assignSelect = document.getElementById('assign_type');
+    const assetField = document.querySelector('.asset-field');
+    const shotField = document.querySelector('.shot-field');
+    assignSelect.addEventListener('change', () => {
+      if (assignSelect.value === 'asset') {
+        assetField.style.display = 'block';
+        shotField.style.display = 'none';
+      } else if (assignSelect.value === 'shot') {
+        assetField.style.display = 'none';
+        shotField.style.display = 'block';
+      } else {
+        assetField.style.display = 'none';
+        shotField.style.display = 'none';
+      }
     });
   });
 </script>
