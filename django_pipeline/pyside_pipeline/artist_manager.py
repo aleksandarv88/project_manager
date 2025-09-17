@@ -42,6 +42,7 @@ PIPELINE_HOUDINI_DIR = PIPELINE_ROOT / 'houdini'
 PIPELINE_MAYA_DIR = PIPELINE_ROOT / 'maya'
 PIPELINE_LIBS_DIR = PIPELINE_ROOT / 'libs'
 PIPELINE_HOUDINI_PYTHON_LIB = PIPELINE_LIBS_DIR / 'python311'
+PIPELINE_MAYA_PYTHON_LIB = PIPELINE_LIBS_DIR / 'python39'
 
 
 def _collect_python_paths() -> List[str]:
@@ -79,6 +80,14 @@ def _merge_path_list(new_entries: List[str], existing: Optional[str], separator:
     if existing:
         items.extend([entry for entry in existing.split(separator) if entry])
     return separator.join(_unique_paths(items))
+
+
+def _merge_python_paths(new_entries: List[str], existing: Optional[str]) -> str:
+    items: List[str] = []
+    items.extend(entry for entry in new_entries if entry)
+    if existing:
+        items.extend(entry for entry in existing.split(os.pathsep) if entry)
+    return os.pathsep.join(_unique_paths(items))
 
 
 def _build_houdini_path(existing: Optional[str]) -> str:
@@ -140,7 +149,7 @@ DEPARTMENT_KEYWORDS: Dict[str, List[str]] = {
 }
 
 DEPARTMENT_SOFTWARE_MAP: Dict[str, List[str]] = {
-    "fx": ["houdini"],
+    "fx": ["houdini", "maya"],
     "mod": ["maya"],
     "layout": ["maya", "houdini"],
     "anim": ["maya"],
@@ -319,7 +328,7 @@ class FX3XManager(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("FX3X Artist Manager")
-        self.resize(1280, 720)
+        self.resize(2000, 1220)
 
         self.db_params = build_db_params()
         self.conn = self._connect_database()
@@ -792,7 +801,8 @@ class FX3XManager(QWidget):
             return
         env = self._build_environment(self.current_task, software, scene_dir, None)
         try:
-            subprocess.Popen([str(executable)], env=env, cwd=str(scene_dir))  # noqa: S603
+            working_dir = str(scene_dir) if software == 'houdini' else None
+            subprocess.Popen([str(executable)], env=env, cwd=working_dir)  # noqa: S603
         except Exception as exc:  # noqa: BLE001
             self._show_critical("Launch failed", f"Could not start {software.title()}: {exc}")
 
@@ -825,7 +835,8 @@ class FX3XManager(QWidget):
         env = self._build_environment(self.current_task, software, scene_dir, record)
         command = [str(executable), str(scene_path)]
         try:
-            subprocess.Popen(command, env=env, cwd=str(scene_dir))  # noqa: S603
+            working_dir = str(scene_dir) if software == 'houdini' else None
+            subprocess.Popen(command, env=env, cwd=working_dir)  # noqa: S603
         except Exception as exc:  # noqa: BLE001
             self._show_critical("Launch failed", f"Could not open scene: {exc}")
 
@@ -864,28 +875,40 @@ class FX3XManager(QWidget):
         env["PIPELINE_SCENE_TABLE"] = SCENE_TABLE_NAME
         env["PIPELINE_TOOLKIT_PATH"] = str(BASE_DIR)
         env["PIPELINE_SCRIPTS_PATH"] = str(PIPELINE_ROOT)
-        env["PIPELINE_HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
-        python_paths = [
-            str(PIPELINE_HOUDINI_PYTHON_LIB),
-            str(BASE_DIR),
-            str(PIPELINE_ROOT),
-        ] + RUNTIME_SITE_PACKAGES
-        env["PYTHONPATH"] = _merge_path_list(python_paths, env.get("PYTHONPATH"), os.pathsep)
-        env["HOUDINI_PATH"] = _build_houdini_path(env.get("HOUDINI_PATH"))
-        env["MAYA_SCRIPT_PATH"] = _merge_path_list(
-            [str(PIPELINE_MAYA_DIR)],
-            env.get("MAYA_SCRIPT_PATH"),
-            os.pathsep,
-        )
+        if PIPELINE_HOUDINI_PYTHON_LIB.exists():
+            env["PIPELINE_HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
+        if PIPELINE_MAYA_PYTHON_LIB.exists():
+            env["PIPELINE_MAYA_PYTHON_LIB"] = str(PIPELINE_MAYA_PYTHON_LIB)
+        if software == 'houdini':
+            python_paths = [
+                str(PIPELINE_HOUDINI_PYTHON_LIB),
+                str(BASE_DIR),
+                str(PIPELINE_ROOT),
+            ]
+            env["PYTHONPATH"] = _merge_python_paths(python_paths, env.get("PYTHONPATH"))
+        elif software not in {'maya'}:
+            python_paths = [str(BASE_DIR), str(PIPELINE_ROOT)]
+            env["PYTHONPATH"] = _merge_python_paths(python_paths, env.get("PYTHONPATH"))
+        if software == "houdini":
+            env["HOUDINI_PATH"] = _build_houdini_path(env.get("HOUDINI_PATH"))
+        elif software == "maya":
+            env["MAYA_SCRIPT_PATH"] = _merge_path_list(
+                [str(PIPELINE_ROOT)],
+                env.get("MAYA_SCRIPT_PATH"),
+                os.pathsep,
+            )
         if scene_record:
             env["PIPELINE_SCENE_ID"] = str(scene_record.id)
             env["PIPELINE_SCENE_PATH"] = str(scene_record.file_path)
             env["PIPELINE_SCENE_VERSION"] = str(scene_record.version)
             env["PIPELINE_SCENE_ITERATION"] = str(scene_record.iteration)
-        if software == "houdini":
+        if software == "houdini" and scene_dir:
             env["HIP"] = str(scene_dir)
-        elif software == "maya" and project_path:
-            env["MAYA_PROJECT"] = str(project_path)
+        elif software == "maya":
+            if scene_dir:
+                env["MAYA_PROJECT"] = str(scene_dir)
+            elif project_path:
+                env["MAYA_PROJECT"] = str(project_path)
         return env
 
     # ---------- Messaging ----------
