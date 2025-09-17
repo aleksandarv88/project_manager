@@ -1,0 +1,21 @@
+<mainMenu>
+  <menuBar>
+    <subMenu>
+      <label>Pipeline</label>
+      <scriptItem id="pipeline.save_version" scriptType="python">
+        <label>Save New Version</label>
+        <scriptCode><![CDATA[
+from pipeline_scripts import menu_commands
+menu_commands.save_new_version()
+        ]]></scriptCode>
+      </scriptItem>
+      <scriptItem id="pipeline.save_iteration" scriptType="python">
+        <label>Save New Iteration</label>
+        <scriptCode><![CDATA[
+from pipeline_scripts import menu_commands
+menu_commands.save_new_iteration()
+        ]]></scriptCode>
+      </scriptItem>
+    </subMenu>
+  </menuBar>
+</mainMenu>
