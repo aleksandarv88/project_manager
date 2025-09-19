@@ -203,4 +203,4 @@ def format_version_label(version: Optional[int]) -> str:
 
 def format_iteration_label(iteration: Optional[int]) -> str:
     value = int(iteration or 0)
-    return f"i{value:02d}"
+    return f"i{value:03d}"

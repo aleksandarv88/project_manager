@@ -54,6 +54,18 @@ class PipelineContext(dict):
     def shot(self) -> str:
         return (self.get("shot") or "").strip()
 
+    @property
+    def artist_name(self) -> str:
+        return (self.get("artist_name") or "").strip()
+
+    @property
+    def task_name(self) -> str:
+        return (self.get("task_name") or "").strip()
+
+    @property
+    def task_folder(self) -> str:
+        return (self.get("task_folder") or "").strip()
+
 
 def save_new_version() -> None:
     _save_scene("version")
@@ -135,6 +147,9 @@ def _collect_context() -> PipelineContext:
         "PIPELINE_SEQUENCE": "sequence",
         "PIPELINE_SHOT": "shot",
         "PIPELINE_PROJECT": "project",
+        "PIPELINE_TASK_NAME": "task_name",
+        "PIPELINE_TASK_FOLDER": "task_folder",
+        "PIPELINE_ARTIST_NAME": "artist_name",
     }
     for env_key, alias in optional_keys.items():
         value = os.environ.get(env_key)
@@ -152,15 +167,21 @@ def _collect_context() -> PipelineContext:
 def _build_scene_path(context: PipelineContext, version: int, iteration: int) -> Path:
     extension = SAVE_EXTENSIONS.get(context.software, ".scene")
     parts = []
+    if context.artist_name:
+        parts.append(_sanitize_name(context.artist_name))
+    if context.task_name:
+        parts.append(_sanitize_name(context.task_name))
+    elif context.task_folder:
+        parts.append(_sanitize_name(context.task_folder))
     if context.asset:
-        parts.append(context.asset)
+        parts.append(_sanitize_name(context.asset))
     else:
         if context.sequence:
-            parts.append(context.sequence)
+            parts.append(_sanitize_name(context.sequence))
         if context.shot:
-            parts.append(context.shot)
+            parts.append(_sanitize_name(context.shot))
     if context.department:
-        parts.append(context.department)
+        parts.append(_sanitize_name(context.department))
     if not parts:
         parts.append(f"task{context.task_id}")
 

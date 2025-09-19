@@ -166,6 +166,7 @@ SCENE_TABLE_NAME = os.environ.get("PIPELINE_SCENE_TABLE", "core_scene_file")
 TASK_COLUMNS = [
     "ID",
     "Task",
+    "Task Type",
     "Project",
     "Sequence",
     "Shot",
@@ -177,11 +178,26 @@ TASK_COLUMNS = [
 SCENE_COLUMNS = ["Version", "Iteration", "Filename", "Updated"]
 
 
+def _sanitize_folder_name(value: str, fallback: str) -> str:
+    candidate = str(value or "").strip()
+    if not candidate:
+        candidate = fallback
+    sanitized_chars = [
+        ch if ch.isalnum() or ch in {"_", "-", "."} else "_"
+        for ch in candidate
+    ]
+    sanitized = ''.join(sanitized_chars).strip('_').lower()
+    if not sanitized:
+        sanitized = fallback
+    return sanitized
+
+
 @dataclass
 class TaskRecord:
     id: int
     artist_id: int
     artist_name: str
+    task_name: str
     task_type: str
     status: str
     description: str
@@ -205,6 +221,21 @@ class TaskRecord:
             return None
         return Path(self.project_base_path) / self.project_name
 
+    def artist_folder_name(self) -> str:
+        fallback = f"artist_{self.artist_id}"
+        return _sanitize_folder_name(self.artist_name, fallback)
+
+    def task_folder_name(self) -> str:
+        if self.context == 'asset':
+            return ''
+        fallback = f"task_{self.id}"
+        base = (self.task_name or '').strip() or (self.description or '').strip() or self.task_type
+        return _sanitize_folder_name(base, fallback)
+
+    def display_task_name(self) -> str:
+        value = (self.task_name or '').strip()
+        return value if value else self.task_type.title()
+
     def scene_root(self) -> Optional[Path]:
         project_path = self.project_path()
         if not project_path:
@@ -220,9 +251,20 @@ class TaskRecord:
 
     def scene_dir_for(self, software: str) -> Optional[Path]:
         root = self.scene_root()
-        if not root:
+        software_key = (software or "").strip().lower()
+        if not root or not software_key:
             return None
-        return root / software.lower() / "scenes"
+        return root / software_key / "scenes" / self.artist_folder_name() / self.task_folder_name()
+
+    def ensure_workspace_dir(self, software: str) -> Optional[Path]:
+        workspace = self.scene_dir_for(software)
+        if not workspace:
+            return None
+        workspace.mkdir(parents=True, exist_ok=True)
+        usd_dir = workspace / "usd"
+        usd_dir.mkdir(parents=True, exist_ok=True)
+        (usd_dir / "data").mkdir(parents=True, exist_ok=True)
+        return workspace
 
 
 @dataclass
@@ -464,6 +506,7 @@ class FX3XManager(QWidget):
             ("shot", "Shot"),
             ("asset", "Asset"),
             ("asset_type", "Asset Type"),
+            ("task_name", "Task Name"),
             ("task_type", "Task Type"),
             ("department", "Department"),
             ("status", "Status"),
@@ -531,6 +574,7 @@ class FX3XManager(QWidget):
             SELECT
                 t.id,
                 t.task_type,
+                t.task_name,
                 t.description,
                 t.status,
                 t.artist_id,
@@ -587,6 +631,7 @@ class FX3XManager(QWidget):
                 id=int(row["id"]),
                 artist_id=int(row["artist_id"]),
                 artist_name=str(row.get("artist_username") or ""),
+                task_name=str(row.get("task_name") or ""),
                 task_type=str(row.get("task_type") or ""),
                 status=str(row.get("status") or ""),
                 description=str(row.get("description") or ""),
@@ -614,14 +659,15 @@ class FX3XManager(QWidget):
             id_item = QTableWidgetItem(str(task.id))
             id_item.setData(Qt.UserRole, task.id)
             self.tasks_table.setItem(row, 0, id_item)
-            self.tasks_table.setItem(row, 1, QTableWidgetItem(task.task_type))
-            self.tasks_table.setItem(row, 2, QTableWidgetItem(task.project_name))
-            self.tasks_table.setItem(row, 3, QTableWidgetItem(task.sequence_name))
-            self.tasks_table.setItem(row, 4, QTableWidgetItem(task.shot_name))
-            self.tasks_table.setItem(row, 5, QTableWidgetItem(task.asset_name))
-            self.tasks_table.setItem(row, 6, QTableWidgetItem(task.department.upper()))
+            self.tasks_table.setItem(row, 1, QTableWidgetItem(task.display_task_name()))
+            self.tasks_table.setItem(row, 2, QTableWidgetItem(task.task_type))
+            self.tasks_table.setItem(row, 3, QTableWidgetItem(task.project_name))
+            self.tasks_table.setItem(row, 4, QTableWidgetItem(task.sequence_name))
+            self.tasks_table.setItem(row, 5, QTableWidgetItem(task.shot_name))
+            self.tasks_table.setItem(row, 6, QTableWidgetItem(task.asset_name))
+            self.tasks_table.setItem(row, 7, QTableWidgetItem(task.department.upper()))
             status_item = QTableWidgetItem(task.status_label())
-            self.tasks_table.setItem(row, 7, status_item)
+            self.tasks_table.setItem(row, 8, status_item)
         if self.current_tasks:
             self.tasks_table.selectRow(0)
         else:
@@ -675,6 +721,7 @@ class FX3XManager(QWidget):
             self._set_detail_value("shot", "", False)
             self._set_detail_value("asset", "", False)
             self._set_detail_value("asset_type", "", False)
+        self._set_detail_value("task_name", task.display_task_name(), True)
         self._set_detail_value("task_type", task.task_type.title(), True)
         self._set_detail_value("department", task.department.upper(), True)
         self._set_detail_value("status", task.status_label(), True)
@@ -787,11 +834,14 @@ class FX3XManager(QWidget):
         if not software:
             self._show_warning("No software", "Select a software package first.")
             return
-        scene_dir = self.current_task.scene_dir_for(software)
+        try:
+            scene_dir = self.current_task.ensure_workspace_dir(software)
+        except OSError as exc:
+            self._show_critical("Workspace error", f"Could not prepare workspace directory:\n{exc}")
+            return
         if not scene_dir:
             self._show_warning("Missing directory", "Cannot determine scene directory for this task.")
             return
-        scene_dir.mkdir(parents=True, exist_ok=True)
         executable = SOFTWARE_EXECUTABLES.get(software)
         if not executable or not executable.exists():
             self._show_warning(
@@ -851,6 +901,8 @@ class FX3XManager(QWidget):
         env["PIPELINE_SOFTWARE"] = software
         env["PIPELINE_TASK_ID"] = str(task.id)
         env["PIPELINE_ARTIST_ID"] = str(task.artist_id)
+        if task.artist_name:
+            env["PIPELINE_ARTIST_NAME"] = task.artist_name
         if task.department:
             env["PIPELINE_DEPARTMENT"] = task.department
         if task.project_name:
@@ -866,6 +918,10 @@ class FX3XManager(QWidget):
             env["PIPELINE_SEQUENCE"] = task.sequence_name
         if task.context == "shot" and task.shot_name:
             env["PIPELINE_SHOT"] = task.shot_name
+        task_label = task.display_task_name()
+        if task_label:
+            env["PIPELINE_TASK_NAME"] = task_label
+        env["PIPELINE_TASK_FOLDER"] = task.task_folder_name()
         env["PIPELINE_SCENE_DIR"] = str(scene_dir)
         env["PIPELINE_DB_NAME"] = self.db_params["dbname"]
         env["PIPELINE_DB_USER"] = self.db_params["user"]

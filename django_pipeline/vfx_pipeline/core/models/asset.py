@@ -18,7 +18,10 @@ class Asset(DiskFolderMixin, models.Model):
     asset_type = models.CharField(max_length=20, choices=ASSET_TYPES, default='other')
     image = models.ImageField(upload_to="assets", blank=True, null=True)
 
-    folder_name = property(lambda self: self.name)
+    @property
+    def folder_name(self):
+        asset_type = (self.asset_type or 'other').strip()
+        return os.path.join(asset_type, self.name)
 
     @property
     def parent_path(self):

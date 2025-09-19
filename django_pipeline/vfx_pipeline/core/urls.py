@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from core.views.artist_views import artist_manager, update_task_status,delete_task
+from core.views.artist_views import artist_manager, update_task, delete_task
 
 
 urlpatterns = [
@@ -33,7 +33,7 @@ urlpatterns = [
     path('shots/edit/<int:pk>/', views.add_shot, name='edit_shot'),
 
     path("artists/", artist_manager, name="artist_manager"),
-    path("tasks/<int:task_id>/status/", update_task_status, name="update_task_status"),
+    path("tasks/<int:task_id>/update/", update_task, name="update_task"),
     path("tasks/<int:task_id>/delete/", delete_task, name="delete_task"),
 
 
