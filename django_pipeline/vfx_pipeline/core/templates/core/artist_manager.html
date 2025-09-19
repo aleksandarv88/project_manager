@@ -174,7 +174,7 @@
       </div>
 
       <div class="form-group">
-        <label for="id_task_type">Task Type</label>
+        <label for="id_task_type">Department</label>
         {{ task_form.task_type }}
       </div>
 
@@ -235,7 +235,7 @@
           <th>Asset</th>
           <th>Sequence / Shot</th>
           <th>Task</th>
-          <th>Task Type</th>
+          <th>Department</th>
           <th>Description</th>
           <th>Status</th>
           <th>Actions</th>
@@ -275,7 +275,7 @@
               </td>
               <td>
                 <select name="task_type" form="update-task-{{ task.id }}">
-                  {% for value,label in task_type_choices %}
+                  {% for value,label in department_choices %}
                     <option value="{{ value }}" {% if task.task_type == value %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
@@ -630,3 +630,5 @@
   });
 </script>
 {% endblock %}
+
+

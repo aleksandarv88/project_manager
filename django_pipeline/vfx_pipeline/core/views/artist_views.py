@@ -126,7 +126,7 @@ def artist_manager(request):
         "artists": artists_list,
         "artist_form": artist_form,
         "task_form": task_form,
-        "task_type_choices": task_form.fields["task_type"].choices,
+        "department_choices": task_form.fields["task_type"].choices,
         "sequence_shot_json": json.dumps(sequence_shot_map, ensure_ascii=False),
         "project_sequence_json": json.dumps(project_sequence_map, ensure_ascii=False),
         "all_sequences_json": json.dumps(all_sequences, ensure_ascii=False),

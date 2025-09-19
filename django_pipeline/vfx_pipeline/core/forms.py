@@ -7,7 +7,7 @@ class ProjectForm(forms.ModelForm):
         model = Project
         fields = ['name', 'image', 'base_path']  # add base_path here
         widgets = {
-            'base_path': forms.TextInput(attrs={'value': 'D:\\', 'size': 50})
+            'base_path': forms.TextInput(attrs={'value': 'D\\', 'size': 50})
         }
 
 
@@ -49,7 +49,7 @@ class ArtistForm(forms.ModelForm):
 
 
 class TaskForm(forms.ModelForm):
-    task_type = forms.ChoiceField(choices=Task.TASK_TYPE_CHOICES)
+    task_type = forms.ChoiceField(choices=Task.TASK_TYPE_CHOICES, label="Department")
     task_name = forms.CharField(max_length=150, required=False)
 
     class Meta:
@@ -102,7 +102,7 @@ class TaskForm(forms.ModelForm):
 
 
 class TaskUpdateForm(forms.ModelForm):
-    task_type = forms.ChoiceField(choices=Task.TASK_TYPE_CHOICES)
+    task_type = forms.ChoiceField(choices=Task.TASK_TYPE_CHOICES, label="Department")
     task_name = forms.CharField(max_length=150, required=False)
 
     class Meta:
