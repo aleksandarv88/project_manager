@@ -45,7 +45,29 @@ class ShotForm(forms.ModelForm):
 class ArtistForm(forms.ModelForm):
     class Meta:
         model = Artist
-        fields = ["username"]
+        fields = ["username", "country", "years_experience", "private_email", "professional_email", "status", "image"]
+        widgets = {
+            "professional_email": forms.TextInput(attrs={"readonly": "readonly"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['professional_email'].disabled = True
+        if self.instance and self.instance.pk:
+            self.fields['professional_email'].initial = self.instance.professional_email
+        else:
+            self.fields['professional_email'].initial = ''
+        if 'status' in self.fields and not self.instance.pk:
+            self.fields['status'].initial = 'active'
+
+    def save(self, commit=True):
+        artist = super().save(commit=False)
+        if artist.username:
+            artist.professional_email = f"{artist.username}@fx3x.com"
+        if commit:
+            artist.save()
+        return artist
+
 
 
 class TaskForm(forms.ModelForm):

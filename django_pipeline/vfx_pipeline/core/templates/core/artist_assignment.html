@@ -1,0 +1,625 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Artist Assignment{% endblock %}
+
+{% block content %}
+<style>
+  .artist-manager-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  .artist-manager-left {
+    flex: 1;
+    background: #3a3a3a;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  .artist-manager-right {
+    flex: 2;
+  }
+  .artist-manager-left h2,
+  .artist-manager-right h2 {
+    margin-top: 0;
+    color: #fff;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+    color: #fff;
+  }
+  select,
+  textarea,
+  input[type="text"] {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #2b2b2b;
+    color: #fff;
+  }
+  textarea {
+    min-height: 40px;
+    resize: vertical;
+  }
+  .btn {
+    padding: 4px 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+  }
+  .btn-danger {
+    background: #d9534f;
+    color: white;
+  }
+  .btn-secondary {
+    background: #5bc0de;
+    color: white;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #3a3a3a;
+    color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th, td {
+    border: 1px solid #555;
+    padding: 5px;
+    text-align: left;
+  }
+  th {
+    background: #1c1c1c;
+  }
+  .artist-header {
+    background-color: #444;
+    cursor: pointer;
+  }
+  .toggle-icon {
+    margin-right: 0.5rem;
+    font-weight: bold;
+  }
+  .task-row.green {
+    background-color: #2f4f2f; /* dark green */
+  }
+  .task-row.orange {
+    background-color: #5a4c1c; /* dark orange */
+  }
+  .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .inline-form {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+    margin: 0;
+  }
+  .filter-form {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+  }
+  .filter-form .form-group {
+    margin-bottom: 0;
+    min-width: 160px;
+  }
+  .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+</style>
+
+<h1>Artist Assignment</h1>
+
+<div class="artist-manager-container">
+  <!-- Left column: forms -->
+  <div class="artist-manager-left">
+    <h2>Assign Task</h2>
+    <form method="post" class="add-task-form">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="id_artist">Artist</label>
+        {{ task_form.artist }}
+      </div>
+
+      <div class="form-group">
+        <label for="assign_type">Assign To</label>
+        <select id="assign_type">
+          <option value="">-- Select --</option>
+          <option value="asset">Asset</option>
+          <option value="shot">Shot</option>
+        </select>
+      </div>
+
+      <div class="form-group asset-field" style="display:none;">
+        <label for="id_asset">Asset</label>
+        {{ task_form.asset }}
+      </div>
+
+      <div class="form-group sequence-field" style="display:none;">
+        <label for="id_sequence">Sequence</label>
+        {{ task_form.sequence }}
+      </div>
+
+      <div class="form-group shot-field" style="display:none;">
+        <label for="id_shot">Shot</label>
+        {{ task_form.shot }}
+      </div>
+
+      <div class="form-group task-name-field" style="display:none;">
+        <label for="id_task_name">Task Name</label>
+        {{ task_form.task_name }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_task_type">Department</label>
+        {{ task_form.task_type }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_description">Description</label>
+        {{ task_form.description }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_status">Status</label>
+        {{ task_form.status }}
+      </div>
+
+      <input type="hidden" name="filter_project" value="{{ filter_project }}">
+      <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
+      <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+      <input type="hidden" name="open_artists" id="open_artists_right">
+      <button type="submit" name="add_task" class="btn btn-secondary">Add Task</button>
+    </form>
+  </div>
+
+  <!-- Right column: tasks grouped by artist -->
+  <div class="artist-manager-right">
+    <h2>Artists &amp; Tasks</h2>
+
+    <form method="get" class="filter-form" id="task-filter-form">
+      <div class="form-group">
+        <label for="filter_project">Project</label>
+        <select id="filter_project" name="project">
+          <option value="">----</option>
+          {% for project in project_options %}
+            <option value="{{ project.id }}" {% if filter_project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter_sequence">Sequence</label>
+        <select id="filter_sequence" name="sequence" data-selected="{{ filter_sequence }}">
+          <option value="">----</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter_shot">Shot</label>
+        <select id="filter_shot" name="shot" data-selected="{{ filter_shot }}" disabled>
+          <option value="">----</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        <a href="{% url 'artist_manager' %}" class="btn btn-danger">Clear</a>
+      </div>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Asset</th>
+          <th>Sequence / Shot</th>
+          <th>Task</th>
+          <th>Department</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for artist in artists %}
+          <tr class="artist-header" data-artist="{{ artist.id }}">
+            <td colspan="8">
+              <span class="toggle-icon">+</span>
+              <strong>{{ artist.username }}</strong>
+            </td>
+          </tr>
+          {% for task in artist.tasks.all %}
+            <tr class="task-row artist-{{ artist.id }} green" style="display:none;">
+              <td>
+                {% if task.asset %}
+                  {{ task.asset.project.name }}
+                {% elif task.sequence %}
+                  {{ task.sequence.project.name }}
+                {% elif task.shot %}
+                  {{ task.shot.sequence.project.name }}
+                {% else %}-{% endif %}
+              </td>
+              <td>{% if task.asset %}{{ task.asset.name }}{% else %}-{% endif %}</td>
+              <td>
+                {% if task.sequence and task.shot %}
+                  {{ task.sequence.name }}_{{ task.shot.name }}
+                {% elif task.sequence %}
+                  {{ task.sequence.name }}
+                {% elif task.shot %}
+                  {{ task.shot.name }}
+                {% else %}-{% endif %}
+              </td>
+              <td>
+                <input type="text" name="task_name" form="update-task-{{ task.id }}" value="{{ task.task_name|default_if_none:'' }}" />
+              </td>
+              <td>
+                <select name="task_type" form="update-task-{{ task.id }}">
+                  {% for value,label in department_choices %}
+                    <option value="{{ value }}" {% if task.task_type == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <textarea name="description" form="update-task-{{ task.id }}" rows="2">{{ task.description|default_if_none:'' }}</textarea>
+              </td>
+              <td>
+                <select name="status" form="update-task-{{ task.id }}">
+                  {% for code,label in task.STATUS_CHOICES %}
+                    <option value="{{ code }}" {% if code == task.status %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="actions-cell">
+                <form id="update-task-{{ task.id }}" action="{% url 'update_task' task.id %}" method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="filter_project" value="{{ filter_project }}">
+                  <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
+                  <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+                  <input type="hidden" name="open_artists" class="open-artists-input">
+                  <button type="submit" class="btn btn-secondary">Update</button>
+                </form>
+                <form action="{% url 'delete_task' task.id %}" method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="filter_project" value="{{ filter_project }}">
+                  <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
+                  <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+                  <input type="hidden" name="open_artists" class="open-artists-input">
+                  <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this task?');">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr class="task-row artist-{{ artist.id }} green" style="display:none;">
+              <td colspan="8">No tasks assigned</td>
+            </tr>
+          {% endfor %}
+        {% empty %}
+          <tr>
+            <td colspan="8">{% if filters_active %}No tasks match the current filters.{% else %}No artists yet.{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="application/json" id="project-sequence-data">{{ project_sequence_json|safe }}</script>
+<script type="application/json" id="all-sequences-data">{{ all_sequences_json|safe }}</script>
+<script type="application/json" id="sequence-shot-data">{{ sequence_shot_json|safe }}</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const openArtists = new Set();
+
+    const syncOpenInputs = () => {
+      const value = Array.from(openArtists).join(',');
+      document.querySelectorAll('#open_artists_left, #open_artists_right, .open-artists-input')
+        .forEach(input => { input.value = value; });
+    };
+
+    document.querySelectorAll('.artist-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const artistId = header.getAttribute('data-artist');
+        const icon = header.querySelector('.toggle-icon');
+        const rows = document.querySelectorAll('.artist-' + artistId);
+        const isHidden = [...rows].every(row => row.style.display === 'none');
+        rows.forEach(row => { row.style.display = isHidden ? 'table-row' : 'none'; });
+        icon.textContent = isHidden ? '-' : '+';
+        if (isHidden) {
+          openArtists.add(artistId);
+        } else {
+          openArtists.delete(artistId);
+        }
+        syncOpenInputs();
+      });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const open = params.get('open');
+    if (open) {
+      open.split(',').forEach(id => {
+        document.querySelectorAll('.artist-' + id)
+          .forEach(row => { row.style.display = 'table-row'; });
+        const icon = document.querySelector('.artist-header[data-artist="' + id + '"] .toggle-icon');
+        if (icon) {
+          icon.textContent = '-';
+        }
+        openArtists.add(id);
+      });
+      syncOpenInputs();
+    }
+
+    const projectSequenceElement = document.getElementById('project-sequence-data');
+    const projectSequenceData = projectSequenceElement ? JSON.parse(projectSequenceElement.textContent || '{}') : {};
+    const allSequencesElement = document.getElementById('all-sequences-data');
+    const allSequencesData = allSequencesElement ? JSON.parse(allSequencesElement.textContent || '[]') : [];
+    const sequenceDataElement = document.getElementById('sequence-shot-data');
+    const sequenceShotData = sequenceDataElement ? JSON.parse(sequenceDataElement.textContent || '{}') : {};
+
+    const projectFilterSelect = document.getElementById('filter_project');
+    const sequenceFilterSelect = document.getElementById('filter_sequence');
+    const shotFilterSelect = document.getElementById('filter_shot');
+
+    const resetFilterSelect = (select, placeholder) => {
+      if (!select) return;
+      select.innerHTML = '';
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = placeholder;
+      select.appendChild(option);
+      select.disabled = false;
+    };
+
+    const populateSequenceFilter = (projectId, selectedSequence) => {
+      if (!sequenceFilterSelect) return;
+      resetFilterSelect(sequenceFilterSelect, '----');
+      const sequences = projectId && projectSequenceData[projectId]
+        ? projectSequenceData[projectId]
+        : allSequencesData;
+      sequences.forEach(seq => {
+        const option = document.createElement('option');
+        option.value = String(seq.id);
+        option.textContent = seq.name;
+        sequenceFilterSelect.appendChild(option);
+      });
+      if (selectedSequence) {
+        sequenceFilterSelect.value = String(selectedSequence);
+      }
+      sequenceFilterSelect.disabled = sequences.length === 0;
+      if (sequenceFilterSelect.disabled) {
+        sequenceFilterSelect.value = '';
+      }
+    };
+
+    const populateShotFilter = (sequenceId, selectedShot) => {
+      if (!shotFilterSelect) return;
+      resetFilterSelect(shotFilterSelect, '----');
+      const key = sequenceId ? String(sequenceId) : '';
+      const shots = key ? (sequenceShotData[key] || []) : [];
+      shots.forEach(shot => {
+        const option = document.createElement('option');
+        option.value = String(shot.id);
+        option.textContent = shot.name;
+        shotFilterSelect.appendChild(option);
+      });
+      if (selectedShot) {
+        shotFilterSelect.value = String(selectedShot);
+      }
+      shotFilterSelect.disabled = shots.length === 0;
+      if (shotFilterSelect.disabled) {
+        shotFilterSelect.value = '';
+      }
+    };
+
+    const initialProjectValue = projectFilterSelect ? projectFilterSelect.value : '';
+    const initialSequenceValue = sequenceFilterSelect ? sequenceFilterSelect.dataset.selected : '';
+    const initialShotValue = shotFilterSelect ? shotFilterSelect.dataset.selected : '';
+
+    if (sequenceFilterSelect) {
+      populateSequenceFilter(initialProjectValue, initialSequenceValue);
+    }
+    if (shotFilterSelect) {
+      const effectiveSequence = sequenceFilterSelect ? sequenceFilterSelect.value : initialSequenceValue;
+      populateShotFilter(effectiveSequence, initialShotValue);
+    }
+
+    if (projectFilterSelect) {
+      projectFilterSelect.addEventListener('change', () => {
+        populateSequenceFilter(projectFilterSelect.value, '');
+        populateShotFilter('', '');
+      });
+    }
+
+    if (sequenceFilterSelect) {
+      sequenceFilterSelect.addEventListener('change', () => {
+        populateShotFilter(sequenceFilterSelect.value, '');
+      });
+    }
+
+    const assignSelect = document.getElementById('assign_type');
+    const assetField = document.querySelector('.asset-field');
+    const assetSelect = document.getElementById('id_asset');
+    const sequenceField = document.querySelector('.sequence-field');
+    const sequenceSelect = document.getElementById('id_sequence');
+    const shotField = document.querySelector('.shot-field');
+    const shotSelect = document.getElementById('id_shot');
+    const taskNameField = document.querySelector('.task-name-field');
+    const taskNameInput = taskNameField ? taskNameField.querySelector('input, textarea, select') : null;
+
+    const resetShotOptions = () => {
+      if (!shotSelect) return;
+      shotSelect.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = '-- Select Shot --';
+      shotSelect.appendChild(placeholder);
+    };
+
+    const populateShots = (sequenceId, selectedShot) => {
+      if (!shotSelect) return;
+      resetShotOptions();
+      if (!sequenceId) return;
+      const shots = sequenceShotData[String(sequenceId)] || [];
+      shots.forEach(shot => {
+        const option = document.createElement('option');
+        option.value = String(shot.id);
+        option.textContent = shot.name;
+        shotSelect.appendChild(option);
+      });
+      if (selectedShot) {
+        shotSelect.value = String(selectedShot);
+      }
+    };
+
+    const syncAssignmentVisibility = (selectedShot) => {
+      if (!assignSelect) return;
+      const value = assignSelect.value;
+
+      if (value === 'asset') {
+        if (assetField) assetField.style.display = 'block';
+        if (assetSelect) {
+          assetSelect.disabled = false;
+        }
+        if (taskNameField) taskNameField.style.display = 'none';
+        if (taskNameInput) {
+          taskNameInput.value = '';
+          taskNameInput.disabled = true;
+        }
+        if (sequenceField) sequenceField.style.display = 'none';
+        if (shotField) shotField.style.display = 'none';
+        if (sequenceSelect) {
+          sequenceSelect.value = '';
+          sequenceSelect.disabled = true;
+        }
+        if (shotSelect) {
+          resetShotOptions();
+          shotSelect.disabled = true;
+        }
+      } else if (value === 'shot') {
+        if (assetField) assetField.style.display = 'none';
+        if (assetSelect) {
+          assetSelect.value = '';
+          assetSelect.disabled = true;
+        }
+        if (taskNameField) taskNameField.style.display = 'block';
+        if (taskNameInput) {
+          taskNameInput.disabled = false;
+        }
+        if (sequenceField) sequenceField.style.display = 'block';
+        if (shotField) shotField.style.display = 'block';
+        if (sequenceSelect) {
+          sequenceSelect.disabled = false;
+        }
+        if (sequenceSelect && sequenceSelect.value) {
+          populateShots(sequenceSelect.value, selectedShot);
+          if (shotSelect) {
+            shotSelect.disabled = false;
+          }
+        } else {
+          resetShotOptions();
+          if (shotSelect) {
+            shotSelect.disabled = true;
+          }
+        }
+      } else {
+        if (assetField) assetField.style.display = 'none';
+        if (assetSelect) {
+          assetSelect.value = '';
+          assetSelect.disabled = false;
+        }
+        if (taskNameField) taskNameField.style.display = 'none';
+        if (taskNameInput) {
+          taskNameInput.value = '';
+          taskNameInput.disabled = true;
+        }
+        if (sequenceField) sequenceField.style.display = 'none';
+        if (shotField) shotField.style.display = 'none';
+        if (sequenceSelect) {
+          sequenceSelect.value = '';
+          sequenceSelect.disabled = true;
+        }
+        if (shotSelect) {
+          resetShotOptions();
+          shotSelect.disabled = true;
+        }
+      }
+    };
+
+    const inferAssignType = () => {
+      if (!assignSelect) return;
+      if (assetSelect && assetSelect.value) {
+        assignSelect.value = 'asset';
+      } else if ((sequenceSelect && sequenceSelect.value) || (shotSelect && shotSelect.value)) {
+        assignSelect.value = 'shot';
+      } else {
+        assignSelect.value = '';
+      }
+    };
+
+    const initialSequence = sequenceSelect ? sequenceSelect.value : '';
+    const initialShot = shotSelect ? shotSelect.value : '';
+    if (initialSequence) {
+      populateShots(initialSequence, initialShot);
+    } else {
+      resetShotOptions();
+      if (shotSelect) {
+        shotSelect.disabled = true;
+      }
+    }
+
+    inferAssignType();
+    syncAssignmentVisibility(initialShot);
+
+    if (assignSelect) {
+      assignSelect.addEventListener('change', () => {
+        syncAssignmentVisibility(shotSelect ? shotSelect.value : '');
+      });
+    }
+
+    if (sequenceSelect) {
+      sequenceSelect.addEventListener('change', () => {
+        populateShots(sequenceSelect.value, '');
+        if (shotSelect) {
+          shotSelect.disabled = !sequenceSelect.value;
+        }
+      });
+    }
+
+    const markRowDirty = (element) => {
+      const row = element.closest('.task-row');
+      if (!row) return;
+      row.classList.remove('green');
+      row.classList.add('orange');
+    };
+
+    document.querySelectorAll('.task-row select[name="status"], .task-row select[name="task_type"]').forEach(select => {
+      select.addEventListener('change', () => markRowDirty(select));
+    });
+
+    document.querySelectorAll('.task-row input[name="task_name"]').forEach(input => {
+      input.addEventListener('input', () => markRowDirty(input));
+    });
+
+    document.querySelectorAll('.task-row textarea[name="description"]').forEach(textarea => {
+      textarea.addEventListener('input', () => markRowDirty(textarea));
+    });
+
+    syncOpenInputs();
+  });
+</script>
+{% endblock %}
+
+
+
+

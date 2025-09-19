@@ -1,5 +1,6 @@
 import json
 from urllib.parse import urlencode
+from typing import Optional
 
 from django.db.models import Prefetch, Q
 from django.shortcuts import render, redirect, get_object_or_404
@@ -26,7 +27,7 @@ def _redirect_with_state(filters, open_artists=""):
     params = {k: v for k, v in filters.items() if v}
     if open_artists:
         params["open"] = open_artists
-    base_url = reverse("artist_manager")
+    base_url = reverse("artist_assignment")
     if params:
         return redirect(f"{base_url}?{urlencode(params)}")
     return redirect(base_url)
@@ -40,9 +41,56 @@ def _safe_int(value):
 
 
 def artist_manager(request):
-    """
-    Artist manager dashboard with task assignment and filtering.
-    """
+    """Simple page to add artists and manage the roster."""
+    status_filter = request.GET.get("status", "active")
+    valid_filters = {"active", "inactive", "vacation", "all"}
+    if status_filter not in valid_filters:
+        status_filter = "active"
+
+    artists_qs = Artist.objects.order_by("username")
+    if status_filter != "all":
+        artists_qs = artists_qs.filter(status=status_filter)
+    artists = list(artists_qs)
+
+    if request.method == "POST":
+        status_redirect = request.POST.get("status_filter", status_filter)
+        if status_redirect not in valid_filters:
+            status_redirect = "active"
+
+        if "delete_artist" in request.POST:
+            artist_id = request.POST.get("delete_artist_id")
+            if artist_id:
+                artist = get_object_or_404(Artist, pk=artist_id)
+                artist.delete()
+            return redirect(f"{reverse('artist_manager')}?status={status_redirect}")
+
+        form = ArtistForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect(f"{reverse('artist_manager')}?status={status_redirect}")
+    else:
+        form = ArtistForm()
+
+    status_choices = [
+        ("active", "Active"),
+        ("inactive", "Inactive"),
+        ("vacation", "On Vacation"),
+        ("all", "All"),
+    ]
+
+    return render(
+        request,
+        "core/artist_manager.html",
+        {
+            "artist_form": form,
+            "artists": artists,
+            "status_filter": status_filter,
+            "status_choices": status_choices,
+        },
+    )
+
+
+def artist_assignment(request):
     filter_source = request.POST if request.method == "POST" else request.GET
     filter_prefix = "filter_" if request.method == "POST" else ""
     filter_values = _extract_filters(filter_source, prefix=filter_prefix)
@@ -100,31 +148,17 @@ def artist_manager(request):
 
     project_options = Project.objects.order_by("name")
 
-    if request.method == "POST":
-        if "add_artist" in request.POST:
-            artist_form = ArtistForm(request.POST)
-            task_form = TaskForm()
-            if artist_form.is_valid():
-                artist_form.save()
-                open_artists = request.POST.get("open_artists", "")
-                return _redirect_with_state(filter_values, open_artists)
-        elif "add_task" in request.POST:
-            task_form = TaskForm(request.POST)
-            artist_form = ArtistForm()
-            if task_form.is_valid():
-                task_form.save()
-                open_artists = request.POST.get("open_artists", "")
-                return _redirect_with_state(filter_values, open_artists)
-        else:
-            artist_form = ArtistForm()
-            task_form = TaskForm()
+    if request.method == "POST" and "add_task" in request.POST:
+        task_form = TaskForm(request.POST)
+        if task_form.is_valid():
+            task_form.save()
+            open_artists = request.POST.get("open_artists", "")
+            return _redirect_with_state(filter_values, open_artists)
     else:
-        artist_form = ArtistForm()
         task_form = TaskForm()
 
     context = {
         "artists": artists_list,
-        "artist_form": artist_form,
         "task_form": task_form,
         "department_choices": task_form.fields["task_type"].choices,
         "sequence_shot_json": json.dumps(sequence_shot_map, ensure_ascii=False),
@@ -137,7 +171,27 @@ def artist_manager(request):
         "filters_active": filters_active,
     }
 
-    return render(request, "core/artist_manager.html", context)
+    return render(request, "core/artist_assignment.html", context)
+
+
+def artist_info(request, artist_id):
+    artist = get_object_or_404(Artist, pk=artist_id)
+    if request.method == "POST":
+        form = ArtistForm(request.POST, request.FILES, instance=artist)
+        if form.is_valid():
+            form.save()
+            return redirect("artist_info", artist_id=artist.id)
+    else:
+        form = ArtistForm(instance=artist)
+
+    return render(
+        request,
+        "core/artist_info.html",
+        {
+            "artist": artist,
+            "form": form,
+        },
+    )
 
 
 def update_task(request, task_id):
@@ -154,9 +208,7 @@ def update_task(request, task_id):
 
 
 def delete_task(request, task_id):
-    """
-    Deletes a Task and preserves open artists.
-    """
+    """Deletes a Task and preserves open artists."""
     task = get_object_or_404(Task, pk=task_id)
     filters = _extract_filters(request.POST, prefix="filter_")
     if request.method == "POST":

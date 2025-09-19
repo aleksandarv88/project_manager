@@ -166,12 +166,11 @@ SCENE_TABLE_NAME = os.environ.get("PIPELINE_SCENE_TABLE", "core_scene_file")
 TASK_COLUMNS = [
     "ID",
     "Task",
-    "Task Type",
+    "Department",
     "Project",
     "Sequence",
     "Shot",
     "Asset",
-    "Department",
     "Status",
 ]
 
@@ -229,12 +228,12 @@ class TaskRecord:
         if self.context == 'asset':
             return ''
         fallback = f"task_{self.id}"
-        base = (self.task_name or '').strip() or (self.description or '').strip() or self.task_type
+        base = (self.task_name or '').strip() or (self.department or '').strip() or self.task_type
         return _sanitize_folder_name(base, fallback)
 
     def display_task_name(self) -> str:
         value = (self.task_name or '').strip()
-        return value if value else self.task_type.title()
+        return value if value else (self.department or self.task_type).title()
 
     def scene_root(self) -> Optional[Path]:
         project_path = self.project_path()
@@ -400,6 +399,12 @@ class FX3XManager(QWidget):
         self.artist_combo = QComboBox()
         self.artist_combo.currentIndexChanged.connect(self.on_artist_changed)
         selector_layout.addWidget(self.artist_combo, 1)
+
+        self.refresh_artists_btn = QPushButton("Refresh")
+        self.refresh_artists_btn.setToolTip("Reload artists and tasks from the database")
+        self.refresh_artists_btn.clicked.connect(self.on_refresh_artists)
+        selector_layout.addWidget(self.refresh_artists_btn)
+
         main_layout.addLayout(selector_layout)
 
         body_layout = QHBoxLayout()
@@ -507,7 +512,6 @@ class FX3XManager(QWidget):
             ("asset", "Asset"),
             ("asset_type", "Asset Type"),
             ("task_name", "Task Name"),
-            ("task_type", "Task Type"),
             ("department", "Department"),
             ("status", "Status"),
             ("description", "Description"),
@@ -539,18 +543,37 @@ class FX3XManager(QWidget):
             cur.execute(query, params or ())
             return list(cur.fetchall())
 
-    def load_artists(self) -> None:
+    def on_refresh_artists(self) -> None:
+        selected_id = getattr(self, 'current_artist_id', None)
+        self.load_artists(selected_id)
+
+    def load_artists(self, selected_artist_id: Optional[int] = None) -> None:
         artists = self.query_dicts("SELECT id, username FROM core_artist ORDER BY username;")
         self.artist_combo.blockSignals(True)
         self.artist_combo.clear()
-        for artist in artists:
-            self.artist_combo.addItem(str(artist["username"]), int(artist["id"]))
+        index_to_select = None
+        for idx, artist in enumerate(artists):
+            artist_id = int(artist["id"])
+            self.artist_combo.addItem(str(artist["username"]), artist_id)
+            if selected_artist_id is not None and artist_id == selected_artist_id:
+                index_to_select = idx
         self.artist_combo.blockSignals(False)
         if artists:
-            self.artist_combo.setCurrentIndex(0)
+            if index_to_select is None:
+                index_to_select = 0
+            self.artist_combo.setCurrentIndex(index_to_select)
             self.on_artist_changed()
         else:
-            self.on_artist_changed()
+            self.current_artist_id = None
+            self.current_tasks = []
+            self.current_task = None
+            self.scene_records = []
+            self.tasks_table.setRowCount(0)
+            self.software_combo.blockSignals(True)
+            self.software_combo.clear()
+            self.software_combo.blockSignals(False)
+            self._populate_tasks_table()
+            self._update_buttons_enabled()
 
     def on_artist_changed(self) -> None:
         self.load_tasks()
@@ -660,14 +683,14 @@ class FX3XManager(QWidget):
             id_item.setData(Qt.UserRole, task.id)
             self.tasks_table.setItem(row, 0, id_item)
             self.tasks_table.setItem(row, 1, QTableWidgetItem(task.display_task_name()))
-            self.tasks_table.setItem(row, 2, QTableWidgetItem(task.task_type))
+            department_label = (task.department or task.task_type or "").upper()
+            self.tasks_table.setItem(row, 2, QTableWidgetItem(department_label))
             self.tasks_table.setItem(row, 3, QTableWidgetItem(task.project_name))
             self.tasks_table.setItem(row, 4, QTableWidgetItem(task.sequence_name))
             self.tasks_table.setItem(row, 5, QTableWidgetItem(task.shot_name))
             self.tasks_table.setItem(row, 6, QTableWidgetItem(task.asset_name))
-            self.tasks_table.setItem(row, 7, QTableWidgetItem(task.department.upper()))
             status_item = QTableWidgetItem(task.status_label())
-            self.tasks_table.setItem(row, 8, status_item)
+            self.tasks_table.setItem(row, 7, status_item)
         if self.current_tasks:
             self.tasks_table.selectRow(0)
         else:
@@ -722,8 +745,8 @@ class FX3XManager(QWidget):
             self._set_detail_value("asset", "", False)
             self._set_detail_value("asset_type", "", False)
         self._set_detail_value("task_name", task.display_task_name(), True)
-        self._set_detail_value("task_type", task.task_type.title(), True)
-        self._set_detail_value("department", task.department.upper(), True)
+        department_text = (task.department or task.task_type or "").upper()
+        self._set_detail_value("department", department_text if department_text else "-", True)
         self._set_detail_value("status", task.status_label(), True)
         self._set_detail_value("description", task.description.strip(), bool(task.description.strip()))
 
@@ -1076,3 +1099,4 @@ if __name__ == "__main__":
     window = FX3XManager()
     window.show()
     sys.exit(app.exec_())
+

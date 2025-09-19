@@ -55,6 +55,10 @@ class PipelineContext(dict):
         return (self.get("shot") or "").strip()
 
     @property
+    def project(self) -> str:
+        return (self.get("project") or "").strip()
+
+    @property
     def artist_name(self) -> str:
         return (self.get("artist_name") or "").strip()
 
@@ -166,29 +170,33 @@ def _collect_context() -> PipelineContext:
 
 def _build_scene_path(context: PipelineContext, version: int, iteration: int) -> Path:
     extension = SAVE_EXTENSIONS.get(context.software, ".scene")
-    parts = []
-    if context.artist_name:
-        parts.append(_sanitize_name(context.artist_name))
-    if context.task_name:
-        parts.append(_sanitize_name(context.task_name))
-    elif context.task_folder:
-        parts.append(_sanitize_name(context.task_folder))
+    parts: list[str] = []
+
+    artist = context.artist_name or f"artist{context.artist_id}"
+    parts.append(_sanitize_name(artist))
+
+    department = context.department or ""
+    if department:
+        parts.append(_sanitize_name(department))
+
     if context.asset:
         parts.append(_sanitize_name(context.asset))
     else:
+        task_label = context.task_name or context.task_folder
+        if task_label:
+            parts.append(_sanitize_name(task_label))
+        if context.project:
+            parts.append(_sanitize_name(context.project))
         if context.sequence:
             parts.append(_sanitize_name(context.sequence))
         if context.shot:
             parts.append(_sanitize_name(context.shot))
-    if context.department:
-        parts.append(_sanitize_name(context.department))
-    if not parts:
-        parts.append(f"task{context.task_id}")
+        if not (context.project or context.sequence or context.shot):
+            parts.append(f"task{context.task_id}")
 
-    base = _sanitize_name("_".join(parts))
+    base = _sanitize_name("_".join(filter(None, parts)))
     version_label = versioning.format_version_label(version)
-    iteration_label = versioning.format_iteration_label(iteration)
-    filename = f"{base}_{version_label}_{iteration_label}{extension}"
+    filename = f"{base}_{version_label}{extension}"
     return context.scene_dir / filename
 
 
