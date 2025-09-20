@@ -26,4 +26,4 @@ def delete_project(request, pk):
 
 def project_list(request):
     projects = Project.objects.all()
-    return render(request, "core/project_list.html", {"projects": projects})
+    return render(request, "core/projects_grid.html", {"projects": projects})

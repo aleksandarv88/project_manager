@@ -1,0 +1,26 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Projects</h1>
+<a href="{% url 'add_project' %}" class="btn btn-success mb-3">➕ Add Project</a>
+
+<ul class="list-grid">
+    {% for project in projects %}
+    <li class="list-card">
+        <a href="{% url 'edit_project' project.id %}" class="grid-card-link">
+            {% if project.image %}
+                <img src="{{ project.image.url }}" class="grid-img-circle" alt="{{ project.name }}">
+            {% else %}
+                <div class="grid-placeholder">No Image</div>
+            {% endif %}
+            <div class="grid-name">{{ project.name }}</div>
+        </a>
+        <a href="{% url 'delete_project' project.id %}" class="grid-delete-btn" title="Delete">❌</a>
+    </li>
+    {% empty %}
+    <li class="grid-list-card">No projects yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

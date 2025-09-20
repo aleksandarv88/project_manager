@@ -11,7 +11,7 @@ def asset_list(request):
     else:
         assets = Asset.objects.all()
     
-    return render(request, 'core/asset_list.html', {
+    return render(request, 'core/asset_grid.html', {
         'assets': assets,
         'projects': projects,
         'selected_project': int(project_id) if project_id else None

@@ -9,7 +9,7 @@ def list_sequences(request):
     sequences = Sequence.objects.all()
     if project_id:
         sequences = sequences.filter(project_id=project_id)
-    return render(request, 'core/sequence_list.html', {
+    return render(request, 'core/sequence_grid.html', {
         'projects': projects,
         'sequences': sequences,
         'selected_project': project_id

@@ -45,7 +45,7 @@ def list_shots(request):
         'selected_project': project_id,
         'selected_sequence': sequence_id,
     }
-    return render(request, "core/shot_list.html", context)
+    return render(request, "core/shot_grid.html", context)
 # Delete Shot
 def delete_shot(request, pk):
     shot = get_object_or_404(Shot, pk=pk)

@@ -1,0 +1,26 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Sequences{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Sequences</h1>
+<a href="{% url 'add_sequence' %}" class="btn btn-success mb-3">➕ Add Sequence</a>
+
+<ul class="list-grid">
+    {% for sequence in sequences %}
+    <li class="list-card">
+        <a href="{% url 'edit_sequence' sequence.id %}" class="grid-card-link" title="Edit {{ sequence.name }}">
+            {% if sequence.image %}
+                <img src="{{ sequence.image.url }}" class="grid-img-circle" alt="{{ sequence.name }}">
+            {% else %}
+                <div class="grid-placeholder">No Image</div>
+            {% endif %}
+            <div class="grid-name">{{ sequence.name }}</div>
+        </a>
+        <a href="{% url 'delete_sequence' sequence.id %}" class="grid-delete-btn" title="Delete">❌</a>
+    </li>
+    {% empty %}
+    <li class="grid-list-card">No sequences yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
