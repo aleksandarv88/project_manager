@@ -4,126 +4,267 @@
 
 {% block content %}
 <style>
-  .artist-manager-container {
+  .assignment-wrapper {
     display: flex;
-    gap: 2rem;
+    flex-wrap: wrap;
+    gap: 2.5rem;
     align-items: flex-start;
   }
-  .artist-manager-left {
-    flex: 1;
-    background: #3a3a3a;
-    padding: 15px;
-    border-radius: 8px;
+
+  .assignment-wrapper .panel {
+    background: linear-gradient(135deg, #2d2d33 0%, #242429 100%);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
-  .artist-manager-right {
-    flex: 2;
+
+  .form-panel {
+    flex: 1 1 320px;
+    max-width: 420px;
   }
-  .artist-manager-left h2,
-  .artist-manager-right h2 {
-    margin-top: 0;
-    color: #fff;
+
+  .roster-panel {
+    flex: 1 1 640px;
+    min-width: 0;
+    overflow-x: auto;
   }
-  .form-group {
-    margin-bottom: 1rem;
+
+  .form-panel h2,
+  .roster-panel h2 {
+    margin: 0 0 18px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #fdfdfd;
   }
-  label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 0.2rem;
-    color: #fff;
+
+  .add-task-form {
+    display: grid;
+    gap: 16px;
   }
-  select,
-  textarea,
-  input[type="text"] {
-    width: 100%;
-    padding: 0.4rem;
-    border: 1px solid #666;
-    border-radius: 3px;
-    background: #2b2b2b;
-    color: #fff;
+
+  .add-task-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  textarea {
-    min-height: 40px;
+
+  .add-task-form label {
+    font-weight: 600;
+    color: #d9d9e3;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+  }
+
+  .add-task-form select,
+  .add-task-form textarea,
+  .add-task-form input[type="text"] {
+    background: rgba(20, 20, 26, 0.85);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 12px;
+    color: #f5f5f5;
+    font-size: 0.95rem;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .add-task-form textarea {
+    min-height: 48px;
     resize: vertical;
   }
-  .btn {
-    padding: 4px 10px;
-    cursor: pointer;
-    border: none;
-    border-radius: 3px;
+
+  .add-task-form select:focus,
+  .add-task-form textarea:focus,
+  .add-task-form input[type="text"]:focus {
+    border-color: #5bc0de;
+    box-shadow: 0 0 0 3px rgba(91, 192, 222, 0.25);
+    outline: none;
   }
-  .btn-danger {
-    background: #d9534f;
-    color: white;
+
+  .filter-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
   }
-  .btn-secondary {
-    background: #5bc0de;
-    color: white;
+
+  .filter-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+    margin: 0;
   }
-  table {
+
+  .filter-form label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #b9bed0;
+    font-weight: 600;
+  }
+
+  .filter-form select {
+    background: rgba(20, 20, 26, 0.85);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 14px;
+    color: #f5f5f5;
+  }
+
+  .assignment-table {
     width: 100%;
-    border-collapse: collapse;
-    background: #3a3a3a;
-    color: #fff;
-    border-radius: 8px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(36, 36, 42, 0.95);
+    border-radius: 14px;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
-  th, td {
-    border: 1px solid #555;
-    padding: 5px;
-    text-align: left;
+
+  .assignment-table th,
+  .assignment-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: top;
+    color: #f6f6fb;
+    font-size: 0.92rem;
   }
-  th {
-    background: #1c1c1c;
+
+  .assignment-table th {
+    background: rgba(17, 17, 22, 0.92);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
   }
-  .artist-header {
-    background-color: #444;
+
+  .assignment-table tbody tr:hover {
+    background: rgba(91, 192, 222, 0.12);
+  }
+
+  .assignment-table .artist-header {
+    background: linear-gradient(135deg, rgba(91, 192, 222, 0.22) 0%, rgba(42, 42, 48, 0.9) 100%);
     cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
-  .toggle-icon {
+
+  .assignment-table .artist-header:hover {
+    background: rgba(91, 192, 222, 0.35);
+  }
+
+  .assignment-table .toggle-icon {
     margin-right: 0.5rem;
-    font-weight: bold;
+    font-weight: 700;
+    color: #5bc0de;
   }
-  .task-row.green {
-    background-color: #2f4f2f; /* dark green */
+
+  .assignment-table .task-row {
+    background: rgba(36, 36, 42, 0.95);
   }
-  .task-row.orange {
-    background-color: #5a4c1c; /* dark orange */
+
+  .assignment-table .task-row.green {
+    background: rgba(34, 124, 58, 0.16);
   }
+
+  .assignment-table .task-row.orange {
+    background: rgba(138, 98, 36, 0.18);
+  }
+
+  .assignment-table input[type="text"],
+  .assignment-table textarea,
+  .assignment-table select {
+    width: 100%;
+    background: rgba(20, 20, 26, 0.85);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 10px;
+    color: #f5f5f5;
+    font-size: 0.9rem;
+  }
+
+  .assignment-table textarea {
+    resize: vertical;
+  }
+
+  .assignment-table select:focus,
+  .assignment-table textarea:focus,
+  .assignment-table input[type="text"]:focus {
+    border-color: #5bc0de;
+    box-shadow: 0 0 0 3px rgba(91, 192, 222, 0.25);
+    outline: none;
+  }
+
+  .status-select {
+    background: rgba(18, 18, 24, 0.95);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 6px 26px 6px 12px;
+    color: #f5f5f5;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  .status-select:focus {
+    border-color: #5bc0de;
+    box-shadow: 0 0 0 3px rgba(91, 192, 222, 0.25);
+    outline: none;
+  }
+
+  .status-select.status-not_started {
+    background: rgba(80, 80, 98, 0.85);
+    border-color: rgba(80, 80, 98, 0.95);
+  }
+
+  .status-select.status-wip {
+    background: rgba(63, 98, 138, 0.78);
+    border-color: rgba(63, 98, 138, 0.95);
+  }
+
+  .status-select.status-internal_approved,
+  .status-select.status-client_approved,
+  .status-select.status-done {
+    background: rgba(34, 124, 58, 0.75);
+    border-color: rgba(34, 124, 58, 0.9);
+  }
+
+  .status-select option,
+  .status-select optgroup {
+    background: #1a1a23;
+    color: #f5f5f5;
+  }
+
   .actions-cell {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
     align-items: center;
   }
+
   .inline-form {
     display: inline-flex;
     gap: 0.25rem;
     align-items: center;
     margin: 0;
   }
-  .filter-form {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    margin-bottom: 1rem;
-  }
-  .filter-form .form-group {
-    margin-bottom: 0;
-    min-width: 160px;
-  }
-  .filter-actions {
-    display: flex;
-    gap: 0.5rem;
+
+  .inline-form .btn {
+    border-radius: 999px;
+    padding: 8px 16px;
   }
 </style>
 
 <h1>Artist Assignment</h1>
 
-<div class="artist-manager-container">
+<div class="assignment-wrapper">
   <!-- Left column: forms -->
-  <div class="artist-manager-left">
+  <div class="panel form-panel">
     <h2>Assign Task</h2>
     <form method="post" class="add-task-form">
       {% csrf_token %}
@@ -135,7 +276,7 @@
 
       <div class="form-group">
         <label for="assign_type">Assign To</label>
-        <select id="assign_type">
+        <select id="assign_type" class="assignment-select">
           <option value="">-- Select --</option>
           <option value="asset">Asset</option>
           <option value="shot">Shot</option>
@@ -180,44 +321,58 @@
       <input type="hidden" name="filter_project" value="{{ filter_project }}">
       <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
       <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+      <input type="hidden" name="filter_asset" value="{{ filter_asset }}">
+      <input type="hidden" name="filter_context" value="{{ filter_context }}">
+      <input type="hidden" name="open_artists" id="open_artists_left">
       <input type="hidden" name="open_artists" id="open_artists_right">
       <button type="submit" name="add_task" class="btn btn-secondary">Add Task</button>
     </form>
   </div>
 
   <!-- Right column: tasks grouped by artist -->
-  <div class="artist-manager-right">
+  <div class="panel roster-panel">
     <h2>Artists &amp; Tasks</h2>
 
     <form method="get" class="filter-form" id="task-filter-form">
+      <input type="hidden" name="open" id="open_artists_filter" class="open-artists-input">
+      <div class="form-group">
+        <label for="filter_context">Context</label>
+        <select id="filter_context" name="context" class="filter-select">
+          <option value="" {% if not filter_context %}selected{% endif %}>---</option>
+          <option value="shot" {% if filter_context == 'shot' %}selected{% endif %}>Shots</option>
+          <option value="asset" {% if filter_context == 'asset' %}selected{% endif %}>Assets</option>
+        </select>
+      </div>
       <div class="form-group">
         <label for="filter_project">Project</label>
-        <select id="filter_project" name="project">
+        <select id="filter_project" name="project" class="filter-select">
           <option value="">----</option>
           {% for project in project_options %}
             <option value="{{ project.id }}" {% if filter_project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group asset-filter-group" {% if filter_context != 'asset' %}style="display:none;"{% endif %}>
+        <label for="filter_asset">Asset</label>
+        <select id="filter_asset" name="asset" data-selected="{{ filter_asset }}" class="filter-select"{% if filter_context != 'asset' or not filter_project %} disabled{% endif %}>
+          <option value="">----</option>
+        </select>
+      </div>
+      <div class="form-group sequence-filter-group" {% if filter_context == 'asset' %}style="display:none;"{% endif %}>
         <label for="filter_sequence">Sequence</label>
-        <select id="filter_sequence" name="sequence" data-selected="{{ filter_sequence }}">
+        <select id="filter_sequence" name="sequence" data-selected="{{ filter_sequence }}" class="filter-select"{% if filter_context == 'asset' or not filter_project %} disabled{% endif %}>
           <option value="">----</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group shot-filter-group" {% if filter_context == 'asset' %}style="display:none;"{% endif %}>
         <label for="filter_shot">Shot</label>
-        <select id="filter_shot" name="shot" data-selected="{{ filter_shot }}" disabled>
+        <select id="filter_shot" name="shot" data-selected="{{ filter_shot }}" class="filter-select"{% if filter_context == 'asset' or not filter_sequence %} disabled{% endif %}>
           <option value="">----</option>
         </select>
-      </div>
-      <div class="filter-actions">
-        <button type="submit" class="btn btn-secondary">Apply</button>
-        <a href="{% url 'artist_manager' %}" class="btn btn-danger">Clear</a>
       </div>
     </form>
 
-    <table>
+    <table class="assignment-table">
       <thead>
         <tr>
           <th>Project</th>
@@ -273,7 +428,7 @@
                 <textarea name="description" form="update-task-{{ task.id }}" rows="2">{{ task.description|default_if_none:'' }}</textarea>
               </td>
               <td>
-                <select name="status" form="update-task-{{ task.id }}">
+                <select name="status" form="update-task-{{ task.id }}" class="status-select status-{{ task.status }}">
                   {% for code,label in task.STATUS_CHOICES %}
                     <option value="{{ code }}" {% if code == task.status %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
@@ -285,6 +440,8 @@
                   <input type="hidden" name="filter_project" value="{{ filter_project }}">
                   <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
                   <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+                  <input type="hidden" name="filter_asset" value="{{ filter_asset }}">
+                  <input type="hidden" name="filter_context" value="{{ filter_context }}">
                   <input type="hidden" name="open_artists" class="open-artists-input">
                   <button type="submit" class="btn btn-secondary">Update</button>
                 </form>
@@ -293,6 +450,8 @@
                   <input type="hidden" name="filter_project" value="{{ filter_project }}">
                   <input type="hidden" name="filter_sequence" value="{{ filter_sequence }}">
                   <input type="hidden" name="filter_shot" value="{{ filter_shot }}">
+                  <input type="hidden" name="filter_asset" value="{{ filter_asset }}">
+                  <input type="hidden" name="filter_context" value="{{ filter_context }}">
                   <input type="hidden" name="open_artists" class="open-artists-input">
                   <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this task?');">
                     Delete
@@ -316,7 +475,7 @@
 </div>
 
 <script type="application/json" id="project-sequence-data">{{ project_sequence_json|safe }}</script>
-<script type="application/json" id="all-sequences-data">{{ all_sequences_json|safe }}</script>
+<script type="application/json" id="project-asset-data">{{ project_asset_json|safe }}</script>
 <script type="application/json" id="sequence-shot-data">{{ sequence_shot_json|safe }}</script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -362,14 +521,32 @@
 
     const projectSequenceElement = document.getElementById('project-sequence-data');
     const projectSequenceData = projectSequenceElement ? JSON.parse(projectSequenceElement.textContent || '{}') : {};
-    const allSequencesElement = document.getElementById('all-sequences-data');
-    const allSequencesData = allSequencesElement ? JSON.parse(allSequencesElement.textContent || '[]') : [];
+    const projectAssetElement = document.getElementById('project-asset-data');
+    const projectAssetData = projectAssetElement ? JSON.parse(projectAssetElement.textContent || '{}') : {};
     const sequenceDataElement = document.getElementById('sequence-shot-data');
     const sequenceShotData = sequenceDataElement ? JSON.parse(sequenceDataElement.textContent || '{}') : {};
 
     const projectFilterSelect = document.getElementById('filter_project');
     const sequenceFilterSelect = document.getElementById('filter_sequence');
     const shotFilterSelect = document.getElementById('filter_shot');
+    const assetFilterSelect = document.getElementById('filter_asset');
+    const contextSelect = document.getElementById('filter_context');
+    const filterForm = document.getElementById('task-filter-form');
+    const assetFilterGroup = document.querySelector('.asset-filter-group');
+    const sequenceFilterGroup = document.querySelector('.sequence-filter-group');
+    const shotFilterGroup = document.querySelector('.shot-filter-group');
+
+    const submitFilters = () => {
+      if (!filterForm) return;
+      syncOpenInputs();
+      if (typeof filterForm.requestSubmit === 'function') {
+        filterForm.requestSubmit();
+      } else {
+        filterForm.submit();
+      }
+    };
+
+    const isAssetContext = () => contextSelect && contextSelect.value === 'asset';
 
     const resetFilterSelect = (select, placeholder) => {
       if (!select) return;
@@ -378,25 +555,31 @@
       option.value = '';
       option.textContent = placeholder;
       select.appendChild(option);
-      select.disabled = false;
     };
 
     const populateSequenceFilter = (projectId, selectedSequence) => {
       if (!sequenceFilterSelect) return;
       resetFilterSelect(sequenceFilterSelect, '----');
-      const sequences = projectId && projectSequenceData[projectId]
-        ? projectSequenceData[projectId]
-        : allSequencesData;
+      const key = projectId ? String(projectId) : '';
+      if (!key) {
+        sequenceFilterSelect.disabled = true;
+        sequenceFilterSelect.value = '';
+        return;
+      }
+      const sequences = projectSequenceData[key] || [];
       sequences.forEach(seq => {
         const option = document.createElement('option');
         option.value = String(seq.id);
         option.textContent = seq.name;
         sequenceFilterSelect.appendChild(option);
       });
-      if (selectedSequence) {
-        sequenceFilterSelect.value = String(selectedSequence);
-      }
       sequenceFilterSelect.disabled = sequences.length === 0;
+      if (!sequenceFilterSelect.disabled && selectedSequence) {
+        sequenceFilterSelect.value = String(selectedSequence);
+        if (sequenceFilterSelect.value !== String(selectedSequence)) {
+          sequenceFilterSelect.value = '';
+        }
+      }
       if (sequenceFilterSelect.disabled) {
         sequenceFilterSelect.value = '';
       }
@@ -406,44 +589,214 @@
       if (!shotFilterSelect) return;
       resetFilterSelect(shotFilterSelect, '----');
       const key = sequenceId ? String(sequenceId) : '';
-      const shots = key ? (sequenceShotData[key] || []) : [];
+      if (!key) {
+        shotFilterSelect.disabled = true;
+        shotFilterSelect.value = '';
+        return;
+      }
+      const shots = sequenceShotData[key] || [];
       shots.forEach(shot => {
         const option = document.createElement('option');
         option.value = String(shot.id);
         option.textContent = shot.name;
         shotFilterSelect.appendChild(option);
       });
-      if (selectedShot) {
-        shotFilterSelect.value = String(selectedShot);
-      }
       shotFilterSelect.disabled = shots.length === 0;
+      if (!shotFilterSelect.disabled && selectedShot) {
+        shotFilterSelect.value = String(selectedShot);
+        if (shotFilterSelect.value !== String(selectedShot)) {
+          shotFilterSelect.value = '';
+        }
+      }
       if (shotFilterSelect.disabled) {
         shotFilterSelect.value = '';
+      }
+    };
+
+    const populateAssetFilter = (projectId, selectedAsset) => {
+      if (!assetFilterSelect) return;
+      resetFilterSelect(assetFilterSelect, '----');
+      const key = projectId ? String(projectId) : '';
+      if (!key) {
+        assetFilterSelect.disabled = true;
+        assetFilterSelect.value = '';
+        return;
+      }
+      const assets = projectAssetData[key] || [];
+      assets.forEach(asset => {
+        const option = document.createElement('option');
+        option.value = String(asset.id);
+        option.textContent = asset.name;
+        assetFilterSelect.appendChild(option);
+      });
+      assetFilterSelect.disabled = assets.length === 0;
+      if (!assetFilterSelect.disabled && selectedAsset) {
+        assetFilterSelect.value = String(selectedAsset);
+        if (assetFilterSelect.value !== String(selectedAsset)) {
+          assetFilterSelect.value = '';
+        }
+      }
+      if (assetFilterSelect.disabled) {
+        assetFilterSelect.value = '';
+      }
+    };
+
+    const applyContextState = () => {
+      const assetMode = isAssetContext();
+      if (assetFilterGroup) {
+        assetFilterGroup.style.display = assetMode ? '' : 'none';
+      }
+      if (sequenceFilterGroup) {
+        sequenceFilterGroup.style.display = assetMode ? 'none' : '';
+      }
+      if (shotFilterGroup) {
+        shotFilterGroup.style.display = assetMode ? 'none' : '';
+      }
+      if (assetFilterSelect) {
+        if (!assetMode) {
+          assetFilterSelect.value = '';
+          assetFilterSelect.disabled = true;
+          assetFilterSelect.dataset.selected = '';
+        } else if (!(projectFilterSelect && projectFilterSelect.value)) {
+          assetFilterSelect.disabled = true;
+        } else {
+          assetFilterSelect.disabled = assetFilterSelect.options.length <= 1;
+        }
+      }
+      if (sequenceFilterSelect) {
+        if (assetMode) {
+          sequenceFilterSelect.value = '';
+          sequenceFilterSelect.disabled = true;
+          sequenceFilterSelect.dataset.selected = '';
+        } else if (projectFilterSelect && projectFilterSelect.value) {
+          sequenceFilterSelect.disabled = sequenceFilterSelect.options.length <= 1;
+        } else {
+          sequenceFilterSelect.disabled = true;
+        }
+      }
+      if (shotFilterSelect) {
+        if (assetMode) {
+          shotFilterSelect.value = '';
+          shotFilterSelect.disabled = true;
+          shotFilterSelect.dataset.selected = '';
+        } else {
+          const hasSequence = sequenceFilterSelect && sequenceFilterSelect.value;
+          shotFilterSelect.disabled = !hasSequence || shotFilterSelect.options.length <= 1;
+        }
       }
     };
 
     const initialProjectValue = projectFilterSelect ? projectFilterSelect.value : '';
     const initialSequenceValue = sequenceFilterSelect ? sequenceFilterSelect.dataset.selected : '';
     const initialShotValue = shotFilterSelect ? shotFilterSelect.dataset.selected : '';
+    const initialAssetValue = assetFilterSelect ? assetFilterSelect.dataset.selected : '';
 
-    if (sequenceFilterSelect) {
+    if (contextSelect && contextSelect.value === 'asset') {
+      populateAssetFilter(initialProjectValue, initialAssetValue);
+    } else {
       populateSequenceFilter(initialProjectValue, initialSequenceValue);
-    }
-    if (shotFilterSelect) {
       const effectiveSequence = sequenceFilterSelect ? sequenceFilterSelect.value : initialSequenceValue;
       populateShotFilter(effectiveSequence, initialShotValue);
     }
+    applyContextState();
 
     if (projectFilterSelect) {
       projectFilterSelect.addEventListener('change', () => {
-        populateSequenceFilter(projectFilterSelect.value, '');
-        populateShotFilter('', '');
+        if (isAssetContext()) {
+          populateAssetFilter(projectFilterSelect.value, '');
+          if (sequenceFilterSelect) {
+            resetFilterSelect(sequenceFilterSelect, '----');
+            sequenceFilterSelect.disabled = true;
+            sequenceFilterSelect.value = '';
+            sequenceFilterSelect.dataset.selected = '';
+          }
+          if (shotFilterSelect) {
+            resetFilterSelect(shotFilterSelect, '----');
+            shotFilterSelect.disabled = true;
+            shotFilterSelect.value = '';
+            shotFilterSelect.dataset.selected = '';
+          }
+        } else {
+          populateSequenceFilter(projectFilterSelect.value, '');
+          populateShotFilter('', '');
+          if (assetFilterSelect) {
+            resetFilterSelect(assetFilterSelect, '----');
+            assetFilterSelect.value = '';
+            assetFilterSelect.disabled = true;
+            assetFilterSelect.dataset.selected = '';
+          }
+        }
+        applyContextState();
+        submitFilters();
+      });
+    }
+
+    if (contextSelect) {
+      contextSelect.addEventListener('change', () => {
+        if (isAssetContext()) {
+          const previousAsset = assetFilterSelect ? assetFilterSelect.dataset.selected || '' : '';
+          if (assetFilterSelect) {
+            populateAssetFilter(projectFilterSelect ? projectFilterSelect.value : '', previousAsset);
+          }
+          if (sequenceFilterSelect) {
+            resetFilterSelect(sequenceFilterSelect, '----');
+            sequenceFilterSelect.disabled = true;
+            sequenceFilterSelect.value = '';
+            sequenceFilterSelect.dataset.selected = '';
+          }
+          if (shotFilterSelect) {
+            resetFilterSelect(shotFilterSelect, '----');
+            shotFilterSelect.disabled = true;
+            shotFilterSelect.value = '';
+            shotFilterSelect.dataset.selected = '';
+          }
+        } else {
+          const currentSequence = sequenceFilterSelect ? sequenceFilterSelect.value : '';
+          const currentShot = shotFilterSelect ? shotFilterSelect.value : '';
+          populateSequenceFilter(projectFilterSelect ? projectFilterSelect.value : '', currentSequence);
+          const effectiveSequence = sequenceFilterSelect ? sequenceFilterSelect.value : currentSequence;
+          populateShotFilter(effectiveSequence, currentShot);
+          if (assetFilterSelect) {
+            resetFilterSelect(assetFilterSelect, '----');
+            assetFilterSelect.value = '';
+            assetFilterSelect.disabled = true;
+            assetFilterSelect.dataset.selected = '';
+          }
+        }
+        applyContextState();
+        submitFilters();
       });
     }
 
     if (sequenceFilterSelect) {
       sequenceFilterSelect.addEventListener('change', () => {
+        if (isAssetContext()) {
+          return;
+        }
         populateShotFilter(sequenceFilterSelect.value, '');
+        sequenceFilterSelect.dataset.selected = sequenceFilterSelect.value || '';
+        applyContextState();
+        submitFilters();
+      });
+    }
+
+    if (shotFilterSelect) {
+      shotFilterSelect.addEventListener('change', () => {
+        if (isAssetContext()) {
+          return;
+        }
+        shotFilterSelect.dataset.selected = shotFilterSelect.value || '';
+        submitFilters();
+      });
+    }
+
+    if (assetFilterSelect) {
+      assetFilterSelect.addEventListener('change', () => {
+        if (!isAssetContext()) {
+          return;
+        }
+        assetFilterSelect.dataset.selected = assetFilterSelect.value || '';
+        submitFilters();
       });
     }
 

@@ -504,6 +504,10 @@ class FX3XManager(QWidget):
         frame.setFrameShadow(QFrame.Raised)
         return frame
 
+    def _format_status_label(self, status: str) -> str:
+        value = status or ""
+        return STATUS_LABELS.get(value, value.replace("_", " ").title())
+
     def _build_detail_rows(self) -> None:
         fields = [
             ("project", "Project"),
@@ -690,11 +694,81 @@ class FX3XManager(QWidget):
             self.tasks_table.setItem(row, 5, QTableWidgetItem(task.shot_name))
             self.tasks_table.setItem(row, 6, QTableWidgetItem(task.asset_name))
             status_item = QTableWidgetItem(task.status_label())
+            status_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.tasks_table.setItem(row, 7, status_item)
+            status_combo = self._build_status_combo(task)
+            self.tasks_table.setCellWidget(row, 7, status_combo)
         if self.current_tasks:
             self.tasks_table.selectRow(0)
         else:
             self.populate_task_details(None)
+
+    def _build_status_combo(self, task: TaskRecord) -> QComboBox:
+        combo = QComboBox()
+        for status_key, label in STATUS_LABELS.items():
+            combo.addItem(label, status_key)
+        if combo.findData(task.status) == -1:
+            combo.addItem(task.status_label(), task.status)
+        self._set_combo_status(combo, task.status)
+        combo.setProperty("task_id", task.id)
+        combo.setProperty("previous_status", task.status)
+        combo.currentIndexChanged.connect(lambda _=None, widget=combo: self.on_task_status_changed(widget))
+        return combo
+
+    def _set_combo_status(self, combo: QComboBox, status: str) -> None:
+        previous_state = combo.blockSignals(True)
+        index = combo.findData(status)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        combo.blockSignals(previous_state)
+
+    def on_task_status_changed(self, combo: QComboBox) -> None:
+        task_id_value = combo.property("task_id")
+        previous_status_value = combo.property("previous_status") or ""
+        new_status_value = combo.currentData()
+        if task_id_value is None or new_status_value is None:
+            return
+        task_id = int(task_id_value)
+        new_status = str(new_status_value)
+        previous_status = str(previous_status_value) if previous_status_value else ""
+        if new_status == previous_status:
+            return
+        if not self._commit_task_status(task_id, new_status):
+            self._set_combo_status(combo, previous_status)
+            return
+        combo.setProperty("previous_status", new_status)
+
+    def _commit_task_status(self, task_id: int, status: str) -> bool:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("UPDATE core_task SET status = %s WHERE id = %s;", (status, task_id))
+        except Exception as exc:  # noqa: BLE001
+            self._show_critical("Database Error", f"Failed to update task status: {exc}")
+            return False
+        task = next((record for record in self.current_tasks if record.id == task_id), None)
+        status_label = self._format_status_label(status)
+        if task:
+            task.status = status
+            status_label = task.status_label()
+        row = self._find_task_row(task_id)
+        if row is not None:
+            item = self.tasks_table.item(row, 7)
+            if item:
+                item.setText(status_label)
+        if self.current_task and self.current_task.id == task_id:
+            self.current_task.status = status
+            self._set_detail_value("status", status_label, True)
+        return True
+
+    def _find_task_row(self, task_id: int) -> Optional[int]:
+        for row in range(self.tasks_table.rowCount()):
+            item = self.tasks_table.item(row, 0)
+            if not item:
+                continue
+            value = item.data(Qt.UserRole)
+            if value is not None and int(value) == task_id:
+                return row
+        return None
 
     def on_task_selection_changed(self) -> None:
         selected_rows = self.tasks_table.selectionModel().selectedRows()

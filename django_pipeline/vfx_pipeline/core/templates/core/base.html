@@ -133,6 +133,29 @@
     outline: none;
   }
 
+  input[type="file"] {
+    color: var(--text-primary);
+  }
+
+  input[type="file"]::file-selector-button,
+  input[type="file"]::-webkit-file-upload-button {
+    background: rgba(16, 17, 22, 0.95);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  input[type="file"]::file-selector-button:hover,
+  input[type="file"]::-webkit-file-upload-button:hover {
+    background: rgba(30, 32, 42, 0.95);
+    border-color: rgba(91, 192, 222, 0.4);
+    box-shadow: 0 0 0 3px rgba(91, 192, 222, 0.2);
+  }
+
   input[readonly],
   input[disabled] {
     background: rgba(46, 48, 60, 0.95);
@@ -228,9 +251,7 @@
         <a href="{% url 'project_list' %}">Projects</a> |
         <a href="{% url 'asset_list' %}">Assets</a> |
         <a href="{% url 'sequence_list' %}">Sequences</a> |
-        <a href="{% url 'add_sequence' %}">Add Sequence</a> |
         <a href="{% url 'shot_list' %}">Shots</a> |
-        <a href="{% url 'add_shot' %}">Add Shot</a> |
         <a href="{% url 'artist_manager' %}">Artist Manager</a> | <a href="{% url 'artist_assignment' %}">Artist Assignment</a> |
     </nav>
 </header>
