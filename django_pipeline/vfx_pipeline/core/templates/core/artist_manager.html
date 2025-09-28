@@ -213,6 +213,9 @@
   .artist-table tbody tr.status-active {
     background: rgba(76, 175, 80, 0.18);
   }
+  .artist-table tbody tr.status-idle {
+    background: rgba(204, 109, 26, 0.2);
+  }
   .artist-table tbody tr.status-inactive {
     background: rgba(96, 96, 112, 0.18);
   }
@@ -246,6 +249,12 @@
     background: rgba(34, 124, 58, 0.75);
     border-color: rgba(34, 124, 58, 0.9);
     color: #f5f5f5;
+  }
+
+  .status-select.status-idle {
+    background: rgba(166, 85, 20, 0.8);
+    border-color: rgba(166, 85, 20, 1);
+    color: #fdf1e3;
   }
 
   .status-select.status-inactive {
@@ -282,6 +291,10 @@
   .status-tag.status-active {
     background: linear-gradient(135deg, #5fd27c 0%, #2b9b46 100%);
     color:#0d2414;
+  }
+  .status-tag.status-idle {
+    background: linear-gradient(135deg, #ffb347 0%, #cc6d1a 100%);
+    color:#2b1604;
   }
   .status-tag.status-inactive {
     background: linear-gradient(135deg, #73737d 0%, #4b4b55 100%);

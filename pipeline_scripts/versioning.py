@@ -7,8 +7,19 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import connection as PGConnection
 
+try:
+    from . import api_client  # type: ignore
+except Exception:  # noqa: BLE001
+    api_client = None
+
 DEFAULT_TABLE_NAME = "core_scene_file"
 TABLE_ENV_VAR = "PIPELINE_SCENE_TABLE"
+
+# Optional HTTP API base; when present, we prefer the Django API
+API_BASE_ENV = "PIPELINE_API_BASE"
+
+def _use_api() -> bool:
+    return bool(os.environ.get(API_BASE_ENV))
 
 
 def get_scene_table_name() -> str:
@@ -78,6 +89,11 @@ def fetch_scenes(
     software: str,
     table_name: Optional[str] = None,
 ) -> List[Dict[str, object]]:
+    if _use_api() and api_client:
+        resp = api_client.api_get("/api/scenes/", {"task_id": task_id, "software": software})
+        if resp.get("ok"):
+            return resp.get("data", [])  # type: ignore[return-value]
+        raise RuntimeError(f"API error: {resp}")
     ident = _table_identifier(table_name)
     with conn.cursor() as cur:
         cur.execute(
@@ -145,6 +161,12 @@ def next_numbers(
     bump: str = "iteration",
     table_name: Optional[str] = None,
 ) -> Tuple[int, int]:
+    if _use_api() and api_client:
+        resp = api_client.api_get("/api/scenes/next/", {"task_id": task_id, "software": software, "bump": bump})
+        if resp.get("ok"):
+            data = resp.get("data", {})
+            return int(data.get("version", 0)), int(data.get("iteration", 0))
+        raise RuntimeError(f"API error: {resp}")
     bump = (bump or "iteration").lower()
     current_version = _max_version(conn, task_id, software, table_name)
     if bump == "version" or current_version == 0:
@@ -164,6 +186,21 @@ def record_scene(
     iteration: int,
     table_name: Optional[str] = None,
 ) -> None:
+    if _use_api() and api_client:
+        resp = api_client.api_post(
+            "/api/scenes/record/",
+            {
+                "task_id": task_id,
+                "artist_id": artist_id,
+                "software": software,
+                "file_path": file_path,
+                "version": version,
+                "iteration": iteration,
+            },
+        )
+        if not resp.get("ok"):
+            raise RuntimeError(f"API error: {resp}")
+        return
     ident = _table_identifier(table_name)
     with conn.cursor() as cur:
         cur.execute(

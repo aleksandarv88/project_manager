@@ -1003,6 +1003,9 @@ class FX3XManager(QWidget):
         env["SOFTWARE"] = software
         if EV:
             env[EV.SOFTWARE] = software
+        # Ensure API base is available to DCCs (falls back to localhost dev server)
+        api_base = os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL") or "http://127.0.0.1:8000"
+        env.setdefault("PIPELINE_API_BASE", api_base)
         env["PIPELINE_TASK_ID"] = str(task.id)
         env["TASK_ID"] = str(task.id)
         if EV:
@@ -1028,6 +1031,10 @@ class FX3XManager(QWidget):
         if project_path:
             env["PIPELINE_PROJECT_PATH"] = str(project_path)
             env["PROJECT_PATH"] = str(project_path)
+            # ROOT should be the parent directory that contains all projects
+            base_root = Path(task.project_base_path) if task.project_base_path else project_path.parent
+            env["PIPELINE_PROJECT_ROOT"] = str(base_root)
+            env["PROJECT_ROOT"] = str(base_root)
         if task.context == "asset" and task.asset_name:
             env["PIPELINE_ASSET"] = task.asset_name
             env["ASSET"] = task.asset_name
@@ -1048,6 +1055,11 @@ class FX3XManager(QWidget):
             env["SHOT"] = task.shot_name
             if EV:
                 env[EV.SHOT] = task.shot_name
+            # Provide shot root directory (<project>/sequences/<seq>/<shot>)
+            if project_path and task.sequence_name:
+                shot_root = project_path / "sequences" / task.sequence_name / task.shot_name
+                env["PIPELINE_SHOT_ROOT"] = str(shot_root)
+                env["SHOT_ROOT"] = str(shot_root)
         task_label = task.display_task_name()
         if task_label:
             env["PIPELINE_TASK_NAME"] = task_label

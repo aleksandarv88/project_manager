@@ -39,6 +39,12 @@ from typing import Any, Dict, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+try:
+    # Optional: use Django API if available
+    from . import api_client  # type: ignore
+except Exception:  # noqa: BLE001
+    api_client = None
+
 
 # ---------- Config ----------
 
@@ -94,6 +100,13 @@ def _default_base_path() -> str:
 
 
 def _ensure_project(conn, project_name: str) -> Dict[str, Any]:
+    # Prefer API if configured
+    if api_client and (os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL")):
+        resp = api_client.api_post("/api/projects/", {"name": project_name, "base_path": _default_base_path()})
+        if not resp.get("ok"):
+            raise RuntimeError(f"API error creating project: {resp}")
+        data = resp.get("data", {})
+        return {"id": data.get("id"), "name": data.get("name"), "base_path": data.get("base_path")}
     row = _fetchone(
         conn,
         "SELECT id, name, base_path FROM core_project WHERE name = %s",
@@ -148,6 +161,25 @@ def publish_asset(
     if not name or not asset_type or not project_name:
         raise ValueError("name, asset_type and project_name are required")
 
+    # API mode
+    if api_client and (os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL")):
+        project = _ensure_project(None, project_name)  # type: ignore[arg-type]
+        project_id = int(project.get("id") or 0)
+        resp = api_client.api_post(
+            "/api/assets/",
+            {"project_id": project_id, "name": name, "asset_type": asset_type},
+        )
+        if not resp.get("ok"):
+            raise RuntimeError(f"API error creating asset: {resp}")
+        data = resp.get("data", {})
+        return AssetRecord(
+            id=int(data.get("id", 0)),
+            name=str(data.get("name", name)),
+            asset_type=str(data.get("asset_type", asset_type)),
+            project_id=int(data.get("project_id", project_id)),
+            image=None,
+        )
+
     conn = _connect()
     try:
         project = _ensure_project(conn, project_name)
@@ -166,20 +198,34 @@ def publish_asset(
 
         if row:
             # Update
-            fields = ["asset_type = %s", "description = %s"]
-            params: list[Any] = [asset_type, description]
+            fields = ["asset_type = %s"]
+            params: list[Any] = [asset_type]
+            # description/image may not exist in model; update only if column exists
+            if description:
+                try:
+                    _execute(conn, "UPDATE core_asset SET description = %s WHERE id = %s", (description, int(row["id"])) )
+                except Exception:
+                    pass
             if image_db_value:
-                fields.append("image = %s")
-                params.append(image_db_value)
-            params.extend([project_id, name])
+                try:
+                    _execute(conn, "UPDATE core_asset SET image = %s WHERE id = %s", (image_db_value, int(row["id"])) )
+                except Exception:
+                    pass
             _execute(
                 conn,
                 f"UPDATE core_asset SET {', '.join(fields)} WHERE project_id = %s AND name = %s",
-                tuple(params),
+                tuple(params + [project_id, name]),
             )
         else:
-            cols = ["name", "asset_type", "project_id", "description"]
-            vals = [name, asset_type, project_id, description]
+            cols = ["name", "asset_type", "project_id"]
+            vals = [name, asset_type, project_id]
+            # optional fields if supported
+            if description:
+                try:
+                    cols.append("description")
+                    vals.append(description)
+                except Exception:
+                    pass
             if image_db_value:
                 cols.append("image")
                 vals.append(image_db_value)
@@ -189,19 +235,6 @@ def publish_asset(
                 f"INSERT INTO core_asset ({', '.join(cols)}) VALUES ({placeholders})",
                 tuple(vals),
             )
-
-        # Optional: set any extra known columns if present in DB
-        if extra:
-            for key, value in extra.items():
-                try:
-                    _execute(
-                        conn,
-                        f"UPDATE core_asset SET {key} = %s WHERE project_id = %s AND name = %s",
-                        (value, project_id, name),
-                    )
-                except Exception:
-                    # Ignore unknown columns
-                    pass
 
         final = _fetchone(
             conn,

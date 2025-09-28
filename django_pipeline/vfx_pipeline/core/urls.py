@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from core.views.artist_views import artist_manager, artist_assignment, artist_info, update_task, delete_task
+from core.views import api_views
 
 
 urlpatterns = [
@@ -43,5 +44,13 @@ urlpatterns = [
 
 
     # API
-    path('api/sequences/', views.api_sequences, name='api_sequences'),
+    path('api/projects/', api_views.api_projects, name='api_projects'),
+    path('api/assets/', api_views.api_assets, name='api_assets'),
+    path('api/sequences/', api_views.api_sequences, name='api_sequences'),
+    path('api/shots/', api_views.api_shots, name='api_shots'),
+    path('api/artists/', api_views.api_artists, name='api_artists'),
+    path('api/tasks/', api_views.api_tasks, name='api_tasks'),
+    path('api/scenes/', api_views.api_scenes, name='api_scenes'),
+    path('api/scenes/next/', api_views.api_scenes_next, name='api_scenes_next'),
+    path('api/scenes/record/', api_views.api_scenes_record, name='api_scenes_record'),
 ]

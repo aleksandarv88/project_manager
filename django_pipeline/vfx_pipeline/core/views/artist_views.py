@@ -46,7 +46,7 @@ def _safe_int(value):
 def artist_manager(request):
     """Simple page to add artists and manage the roster."""
     status_filter = request.GET.get("status", "active")
-    valid_filters = {"active", "inactive", "vacation", "all"}
+    valid_filters = {"active", "idle", "inactive", "vacation", "all"}
     if status_filter not in valid_filters:
         status_filter = "active"
 
@@ -89,6 +89,7 @@ def artist_manager(request):
 
     status_choices = [
         ("active", "Active"),
+        ("idle", "Idle"),
         ("inactive", "Inactive"),
         ("vacation", "On Vacation"),
         ("all", "All"),

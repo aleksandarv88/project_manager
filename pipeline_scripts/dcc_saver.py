@@ -94,12 +94,11 @@ def _save_scene(bump: str) -> None:
         return
 
     try:
-        with db.connection_from_env() as conn:
+        use_api = bool(os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL"))
+        if use_api:
+            conn = None  # type: ignore[assignment]
             version, iteration = versioning.next_numbers(
-                conn,
-                context.task_id,
-                context.software,
-                bump=bump,
+                conn, context.task_id, context.software, bump=bump
             )
             file_path = _build_scene_path(context, version, iteration)
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,6 +112,26 @@ def _save_scene(bump: str) -> None:
                 version,
                 iteration,
             )
+        else:
+            with db.connection_from_env() as conn:
+                version, iteration = versioning.next_numbers(
+                    conn,
+                    context.task_id,
+                    context.software,
+                    bump=bump,
+                )
+                file_path = _build_scene_path(context, version, iteration)
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                _perform_save(context.software, file_path)
+                versioning.record_scene(
+                    conn,
+                    context.task_id,
+                    context.artist_id,
+                    context.software,
+                    str(file_path),
+                    version,
+                    iteration,
+                )
         os.environ["PIPELINE_SCENE_PATH"] = str(file_path)
         version_label = versioning.format_version_label(version)
         iteration_label = versioning.format_iteration_label(iteration)

@@ -5,9 +5,10 @@ from django.utils import timezone
 
 class Artist(models.Model):
     STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('inactive', 'Inactive'),
-        ('vacation', 'On Vacation'),
+        ("active", "Active"),
+        ("idle", "Idle"),
+        ("inactive", "Inactive"),
+        ("vacation", "On Vacation"),
     ]
 
     username = models.CharField(max_length=150, unique=True)
