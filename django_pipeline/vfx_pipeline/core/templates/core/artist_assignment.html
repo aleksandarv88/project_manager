@@ -352,12 +352,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="form-group asset-filter-group" {% if filter_context != 'asset' %}style="display:none;"{% endif %}>
-        <label for="filter_asset">Asset</label>
-        <select id="filter_asset" name="asset" data-selected="{{ filter_asset }}" class="filter-select"{% if filter_context != 'asset' or not filter_project %} disabled{% endif %}>
-          <option value="">----</option>
-        </select>
-      </div>
+
       <div class="form-group sequence-filter-group" {% if filter_context == 'asset' %}style="display:none;"{% endif %}>
         <label for="filter_sequence">Sequence</label>
         <select id="filter_sequence" name="sequence" data-selected="{{ filter_sequence }}" class="filter-select"{% if filter_context == 'asset' or not filter_project %} disabled{% endif %}>

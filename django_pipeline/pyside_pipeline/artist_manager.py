@@ -26,6 +26,10 @@ from PySide2.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+try:
+    from pipe_common import env_vars as EV  # centralized env var keys
+except Exception:
+    EV = None  # fallback if package not available
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 if str(BASE_DIR) not in sys.path:
@@ -150,7 +154,7 @@ DEPARTMENT_KEYWORDS: Dict[str, List[str]] = {
 
 DEPARTMENT_SOFTWARE_MAP: Dict[str, List[str]] = {
     "fx": ["houdini", "maya"],
-    "mod": ["maya"],
+    "mod": ["maya", "houdini"],
     "layout": ["maya", "houdini"],
     "anim": ["maya"],
     "lgt": ["houdini", "maya"],
@@ -996,42 +1000,85 @@ class FX3XManager(QWidget):
     ) -> Dict[str, str]:
         env = os.environ.copy()
         env["PIPELINE_SOFTWARE"] = software
+        env["SOFTWARE"] = software
+        if EV:
+            env[EV.SOFTWARE] = software
         env["PIPELINE_TASK_ID"] = str(task.id)
+        env["TASK_ID"] = str(task.id)
+        if EV:
+            env[EV.TASK_ID] = str(task.id)
         env["PIPELINE_ARTIST_ID"] = str(task.artist_id)
+        env["ARTIST_ID"] = str(task.artist_id)
+        if EV:
+            env[EV.ARTIST_ID] = str(task.artist_id)
         if task.artist_name:
             env["PIPELINE_ARTIST_NAME"] = task.artist_name
+            env["ARTIST_NAME"] = task.artist_name
+            # Shorthand expected by some tools/scripts
+            env["PIPELINE_ARTIST"] = task.artist_name
         if task.department:
             env["PIPELINE_DEPARTMENT"] = task.department
+            env["DEPARTMENT"] = task.department
         if task.project_name:
             env["PIPELINE_PROJECT"] = task.project_name
+            env["PROJECT"] = task.project_name
+            if EV:
+                env[EV.PROJECT] = task.project_name
         project_path = task.project_path()
         if project_path:
             env["PIPELINE_PROJECT_PATH"] = str(project_path)
+            env["PROJECT_PATH"] = str(project_path)
         if task.context == "asset" and task.asset_name:
             env["PIPELINE_ASSET"] = task.asset_name
+            env["ASSET"] = task.asset_name
+            if EV:
+                env[EV.ASSET] = task.asset_name
             if task.asset_type:
                 env["PIPELINE_ASSET_TYPE"] = task.asset_type
+                env["ASSET_TYPE"] = task.asset_type
+                if EV:
+                    env[EV.ASSET_TYPE] = task.asset_type
         if task.sequence_name:
             env["PIPELINE_SEQUENCE"] = task.sequence_name
+            env["SEQUENCE"] = task.sequence_name
+            if EV:
+                env[EV.SEQUENCE] = task.sequence_name
         if task.context == "shot" and task.shot_name:
             env["PIPELINE_SHOT"] = task.shot_name
+            env["SHOT"] = task.shot_name
+            if EV:
+                env[EV.SHOT] = task.shot_name
         task_label = task.display_task_name()
         if task_label:
             env["PIPELINE_TASK_NAME"] = task_label
+            env["TASK_NAME"] = task_label
         env["PIPELINE_TASK_FOLDER"] = task.task_folder_name()
+        env["TASK_FOLDER"] = task.task_folder_name()
         env["PIPELINE_SCENE_DIR"] = str(scene_dir)
+        env["SCENE_DIR"] = str(scene_dir)
+        # DB variables (both legacy and short)
         env["PIPELINE_DB_NAME"] = self.db_params["dbname"]
+        env["DB_NAME"] = self.db_params["dbname"]
         env["PIPELINE_DB_USER"] = self.db_params["user"]
+        env["DB_USER"] = self.db_params["user"]
         env["PIPELINE_DB_PASSWORD"] = self.db_params["password"]
+        env["DB_PASSWORD"] = self.db_params["password"]
         env["PIPELINE_DB_HOST"] = self.db_params["host"]
+        env["DB_HOST"] = self.db_params["host"]
         env["PIPELINE_DB_PORT"] = self.db_params["port"]
+        env["DB_PORT"] = self.db_params["port"]
         env["PIPELINE_SCENE_TABLE"] = SCENE_TABLE_NAME
+        env["SCENE_TABLE"] = SCENE_TABLE_NAME
         env["PIPELINE_TOOLKIT_PATH"] = str(BASE_DIR)
+        env["TOOLKIT_PATH"] = str(BASE_DIR)
         env["PIPELINE_SCRIPTS_PATH"] = str(PIPELINE_ROOT)
+        env["SCRIPTS_PATH"] = str(PIPELINE_ROOT)
         if PIPELINE_HOUDINI_PYTHON_LIB.exists():
             env["PIPELINE_HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
+            env["HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
         if PIPELINE_MAYA_PYTHON_LIB.exists():
             env["PIPELINE_MAYA_PYTHON_LIB"] = str(PIPELINE_MAYA_PYTHON_LIB)
+            env["MAYA_PYTHON_LIB"] = str(PIPELINE_MAYA_PYTHON_LIB)
         if software == 'houdini':
             python_paths = [
                 str(PIPELINE_HOUDINI_PYTHON_LIB),
@@ -1052,9 +1099,13 @@ class FX3XManager(QWidget):
             )
         if scene_record:
             env["PIPELINE_SCENE_ID"] = str(scene_record.id)
+            env["SCENE_ID"] = str(scene_record.id)
             env["PIPELINE_SCENE_PATH"] = str(scene_record.file_path)
+            env["SCENE_PATH"] = str(scene_record.file_path)
             env["PIPELINE_SCENE_VERSION"] = str(scene_record.version)
+            env["SCENE_VERSION"] = str(scene_record.version)
             env["PIPELINE_SCENE_ITERATION"] = str(scene_record.iteration)
+            env["SCENE_ITERATION"] = str(scene_record.iteration)
         if software == "houdini" and scene_dir:
             env["HIP"] = str(scene_dir)
         elif software == "maya":

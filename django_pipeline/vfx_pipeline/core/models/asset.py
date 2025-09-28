@@ -17,7 +17,41 @@ class Asset(DiskFolderMixin, models.Model):
     name = models.CharField(max_length=100)
     asset_type = models.CharField(max_length=20, choices=ASSET_TYPES, default='other')
     image = models.ImageField(upload_to="assets", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # <-- New field
+    #updated_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # <-- New field
 
+    @property
+    def assigned_artists(self):
+        """
+        Returns a queryset of unique artists assigned to this asset via tasks.
+        Assumes Task model has fields: asset (ForeignKey), artist (ForeignKey).
+        """
+        from core.models import task, artist  # Import here to avoid circular import
+        Task = task.Task
+        Artist = artist.Artist
+        artist_ids = Task.objects.filter(asset=self).values_list('artist', flat=True).distinct()
+        return Artist.objects.filter(id__in=artist_ids).values_list('username', flat=True).distinct()
+
+    @property
+    def assigned_artists_with_departments(self):
+        """
+        Returns a list of dicts: [{'username': ..., 'department': ...}, ...]
+        for each unique (artist, department) assigned to this asset via tasks.
+        """
+        from core.models import task, artist
+        Task = task.Task
+        Artist = artist.Artist
+        qs = Task.objects.filter(asset=self).select_related('artist').values('artist__username', 'task_type')
+        # Remove duplicates (artist, department)
+        seen = set()
+        result = []
+        for row in qs:
+            key = (row['artist__username'], row['task_type'])
+            if key not in seen:
+                seen.add(key)
+                result.append({'username': row['artist__username'], 'department': row['task_type']})
+        return result
+    
     @property
     def folder_name(self):
         asset_type = (self.asset_type or 'other').strip()

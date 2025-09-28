@@ -126,37 +126,47 @@ def _save_scene(bump: str) -> None:
 
 
 def _collect_context() -> PipelineContext:
-    required = {
-        "PIPELINE_TASK_ID": "task_id",
-        "PIPELINE_SOFTWARE": "software",
-        "PIPELINE_SCENE_DIR": "scene_dir",
-        "PIPELINE_ARTIST_ID": "artist_id",
+    def _get_any(*keys: str) -> str:
+        for key in keys:
+            val = os.environ.get(key)
+            if val:
+                return val
+        return ""
+
+    # Accept both legacy PIPELINE_* and short names
+    required_map = {
+        ("PL_TASK_ID", "TASK_ID", "PIPELINE_TASK_ID"): "task_id",
+        ("PL_SOFTWARE", "SOFTWARE", "PIPELINE_SOFTWARE"): "software",
+        ("PL_SCENE_DIR", "SCENE_DIR", "PIPELINE_SCENE_DIR"): "scene_dir",
+        ("PL_ARTIST_ID", "ARTIST_ID", "PIPELINE_ARTIST_ID"): "artist_id",
     }
     data: Dict[str, str] = {}
     missing = []
-    for env_key, alias in required.items():
-        value = os.environ.get(env_key)
+    for keys, alias in required_map.items():
+        value = _get_any(*keys)  # type: ignore[arg-type]
         if not value:
-            missing.append(env_key)
+            missing.extend(list(keys))
         else:
             data[alias] = value
-    if missing:
+    if any(not data.get(alias) for alias in required_map.values()):
         raise ValueError(
-            "Missing pipeline context variables: {}".format(", ".join(missing))
+            "Missing pipeline context variables: {}".format(
+                ", ".join(["/".join(k) for k in required_map.keys()])
+            )
         )
 
-    optional_keys = {
-        "PIPELINE_DEPARTMENT": "department",
-        "PIPELINE_ASSET": "asset",
-        "PIPELINE_SEQUENCE": "sequence",
-        "PIPELINE_SHOT": "shot",
-        "PIPELINE_PROJECT": "project",
-        "PIPELINE_TASK_NAME": "task_name",
-        "PIPELINE_TASK_FOLDER": "task_folder",
-        "PIPELINE_ARTIST_NAME": "artist_name",
+    optional_map = {
+        ("PL_DEPARTMENT", "DEPARTMENT", "PIPELINE_DEPARTMENT"): "department",
+        ("PL_ASSET", "ASSET", "PIPELINE_ASSET"): "asset",
+        ("PL_SEQUENCE", "SEQUENCE", "PIPELINE_SEQUENCE"): "sequence",
+        ("PL_SHOT", "SHOT", "PIPELINE_SHOT"): "shot",
+        ("PL_PROJECT", "PROJECT", "PIPELINE_PROJECT"): "project",
+        ("PL_TASK_NAME", "TASK_NAME", "PIPELINE_TASK_NAME"): "task_name",
+        ("PL_TASK_FOLDER", "TASK_FOLDER", "PIPELINE_TASK_FOLDER"): "task_folder",
+        ("PL_ARTIST_NAME", "ARTIST_NAME", "PIPELINE_ARTIST_NAME"): "artist_name",
     }
-    for env_key, alias in optional_keys.items():
-        value = os.environ.get(env_key)
+    for keys, alias in optional_map.items():
+        value = _get_any(*keys)  # type: ignore[arg-type]
         if value:
             data[alias] = value
 
@@ -223,7 +233,12 @@ def _perform_save(software: str, file_path: Path) -> None:
 
 
 def _display_message(message: str, *, level: str = "info") -> None:
-    software = (os.environ.get("PIPELINE_SOFTWARE") or "").lower()
+    software = (
+        os.environ.get("PL_SOFTWARE")
+        or os.environ.get("SOFTWARE")
+        or os.environ.get("PIPELINE_SOFTWARE")
+        or ""
+    ).lower()
     level = level.lower()
     if software == "houdini":
         import hou

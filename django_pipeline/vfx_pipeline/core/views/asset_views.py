@@ -32,3 +32,22 @@ def delete_asset(request, pk):
     asset = get_object_or_404(Asset, pk=pk)
     asset.delete()
     return redirect("asset_list")  # or wherever you want to go after deletion
+
+def asset_info(request, asset_id):
+    asset = get_object_or_404(Asset, pk=asset_id)
+    if request.method == "POST":
+        form = AssetForm(request.POST, request.FILES, instance=asset)
+        if form.is_valid():
+            form.save()
+            return redirect("artist_info", asset_id=asset.id)
+    else:
+        form = AssetForm(instance=asset)
+
+    return render(
+        request,
+        "core/asset_info.html",
+        {
+            "asset": asset,
+            "form": form,
+        },
+    )

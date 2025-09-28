@@ -1,0 +1,66 @@
+{% extends 'core/info_base.html' %}
+
+{% block title %}Asset Info{% endblock %}
+
+{% block content %}
+
+<h1>Asset Info</h1>
+
+<div class="info-layout">
+  <div class="info-panel info-profile-panel">
+    <div class="info-avatar-wrapper">
+      {% if asset.image %}
+        <img src="{{ asset.image.url }}" alt="{{ asset.name }}">
+      {% else %}
+        <div style="width:100%; height:260px; display:flex; align-items:center; justify-content:center; background:#4c4c4c; color:#fff; font-size:48px; font-weight:600;">
+          {{ asset.username|slice:":1"|upper }}
+        </div>
+      {% endif %}
+      <span class="info-status-tag info-status-{{ asset.status }}">{{ asset.get_status_display }}</span>
+    </div>
+    <h2>{{ asset.name }}</h2>
+        <p style="background: #ffb347; color: #232323; display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 600; font-size: 0.98em; margin-bottom: 6px;">
+        Created {{ asset.created_at }}
+        </p>
+        <br>
+        <p style="background: #7fff7f; color: #232323; display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 600; font-size: 0.98em;">
+        Updated {{ asset.created_at }}
+        </p>
+    </br>
+        <br>
+        <div class="info-panel info-profile-panel">
+            <h2>Assigned Artists</h2>
+            {% for item in asset.assigned_artists_with_departments %}
+            {{ item.username }} ({{ item.department }})<br>
+            {% endfor %}
+        </div>
+    </div>
+
+
+  <div class="info-panel info-form-panel">
+    <h2>Edit Asset</h2>
+    <form method="post" enctype="multipart/form-data" class="info-form">
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name != "professional_email" %}
+          <div class="info-field-row">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}
+              <div class="info-field-errors">
+                {% for error in field.errors %}{{ error }}<br>{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <div class="info-profile-actions">
+        <button type="submit" class="info-btn info-btn-secondary">Save Changes</button>
+        <a href="{% url 'asset_list' %}" class="info-btn info-btn-danger">Back</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

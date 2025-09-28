@@ -9,7 +9,7 @@
 <ul class="list-grid">
     {% for asset in assets %}
     <li class="list-card">
-        <a href="{% url 'edit_asset' asset.id %}" class="grid-card-link" title="Edit {{ asset.name }}">
+        <a href="{% url 'asset_info' asset.id %}" class="grid-card-link" title="Edit {{ asset.name }}">
             {% if asset.image %}
                 <img src="{{ asset.image.url }}" class="grid-img-circle" alt="{{ asset.name }}">
             {% else %}

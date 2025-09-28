@@ -1,0 +1,10 @@
+PREFIX = "PL_"  # short prefix for all env vars
+
+SOFTWARE =      PREFIX + "SOFTWARE"
+TASK_ID =       PREFIX + "TASK_ID"
+ARTIST_ID =     PREFIX + "ARTIST_ID"
+PROJECT =       PREFIX + "PROJECT"
+ASSET =         PREFIX + "ASSET"
+ASSET_TYPE =    PREFIX + "ASSET_TYPE"
+SEQUENCE =      PREFIX + "SEQUENCE"
+SHOT =          PREFIX + "SHOT"

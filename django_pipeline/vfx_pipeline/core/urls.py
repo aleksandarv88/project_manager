@@ -15,6 +15,7 @@ urlpatterns = [
     # Assets
     path('assets/', views.asset_list, name='asset_list'),
     path('assets/add/', views.add_asset, name='add_asset'),
+    path('assets/<int:asset_id>', views.asset_info, name='asset_info'),
     path('assets/delete/<int:pk>/', views.delete_asset, name='delete_asset'),
     path('assets/edit/<int:pk>/', views.add_asset, name='edit_asset'),
 
