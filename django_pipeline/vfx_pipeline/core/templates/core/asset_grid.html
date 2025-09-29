@@ -1,26 +1,31 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Assets{% endblock %}
 
 {% block content %}
 <h1 class="mb-4">Assets</h1>
-<a href="{% url 'add_asset' %}" class="btn btn-success mb-3">➕ Add Asset</a>
+<a href="{% url 'add_asset' %}" class="btn btn-success mb-3">+ Add Asset</a>
 
 <ul class="list-grid">
     {% for asset in assets %}
     <li class="list-card">
-        <a href="{% url 'asset_info' asset.id %}" class="grid-card-link" title="Edit {{ asset.name }}">
+        <a href="{% url 'asset_info' asset.id %}" class="grid-card-link" title="View {{ asset.name }}">
             {% if asset.image %}
                 <img src="{{ asset.image.url }}" class="grid-img-circle" alt="{{ asset.name }}">
             {% else %}
-                <div class="grid-placeholder">No Image</div>
+                <div class="grid-placeholder">{{ asset.code|default:asset.name|slice:':2'|upper }}</div>
             {% endif %}
             <div class="grid-name">{{ asset.name }}</div>
+            {% if asset.code %}<div class="grid-subtitle">{{ asset.code }}</div>{% endif %}
+            <div class="grid-meta">{{ asset.get_status_display|default:asset.status|title }}</div>
         </a>
-        <a href="{% url 'delete_asset' asset.id %}" class="grid-delete-btn" title="Delete">❌</a>
+        <div class="grid-actions">
+            <a href="{% url 'edit_asset' asset.id %}" class="grid-action-btn">Edit</a>
+            <a href="{% url 'delete_asset' asset.id %}" class="grid-delete-btn">×</a>
+        </div>
     </li>
     {% empty %}
-    <li class="grid-list-card">No assets yet.</li>
+    <li class="list-card">No assets yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

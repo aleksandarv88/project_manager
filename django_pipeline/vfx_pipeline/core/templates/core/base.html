@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <title>{% block title %}VFX Pipeline{% endblock %}</title>
@@ -137,6 +137,20 @@
   .grid-card-link:hover {
     color: #90caf9;
     text-decoration: underline;
+  }
+  .grid-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .grid-action-btn {
+    color: #5bc0de;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .grid-action-btn:hover {
+    color: #8ed9f0;
   }
   .card, .panel, .form-card, .list-card, .list-grid {
     background: var(--bg-elevated);
@@ -336,6 +350,3 @@
 </main>
 </body>
 </html>
-
-
-

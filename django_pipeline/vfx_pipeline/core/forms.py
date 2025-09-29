@@ -1,36 +1,116 @@
 from django import forms
-from .models import Project, Asset, Sequence, Shot, Artist, Task
+from .models import (
+    Project,
+    Asset,
+    Sequence,
+    Shot,
+    Artist,
+    Task,
+)
 
 
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['name', 'image', 'base_path']  # add base_path here
+        fields = [
+            "name",
+            "code",
+            "description",
+            "status",
+            "base_path",
+            "start_date",
+            "due_date",
+            "default_fps",
+            "resolution_width",
+            "resolution_height",
+            "color_space",
+            "delivery_notes",
+            "image",
+        ]
         widgets = {
-            'base_path': forms.TextInput(attrs={'value': 'D\\', 'size': 50})
+            "base_path": forms.TextInput(attrs={"size": 50}),
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "delivery_notes": forms.Textarea(attrs={"rows": 3}),
         }
 
 
 class AssetForm(forms.ModelForm):
     class Meta:
         model = Asset
-        fields = ['name', 'project', 'asset_type', 'image']  # include image
+        fields = [
+            "name",
+            "code",
+            "project",
+            "asset_type",
+            "category",
+            "subtype",
+            "status",
+            "pipeline_step",
+            "description",
+            "frame_start",
+            "frame_end",
+            "fps",
+            "image",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
 
 
 class SequenceForm(forms.ModelForm):
     class Meta:
         model = Sequence
-        fields = ['project', 'name', 'image']
+        fields = [
+            "project",
+            "name",
+            "code",
+            "description",
+            "status",
+            "frame_start",
+            "frame_end",
+            "handles",
+            "fps",
+            "resolution_width",
+            "resolution_height",
+            "color_space",
+            "image",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
 
 
 class ShotForm(forms.ModelForm):
     class Meta:
         model = Shot
-        fields = ['project', 'sequence', 'name', 'image']
+        fields = [
+            "project",
+            "sequence",
+            "name",
+            "code",
+            "description",
+            "status",
+            "frame_start",
+            "frame_end",
+            "handles",
+            "cut_in",
+            "cut_out",
+            "fps",
+            "resolution_width",
+            "resolution_height",
+            "color_space",
+            "shot_type",
+            "notes",
+            "image",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['sequence'].queryset = Sequence.objects.none()
+        self.fields['sequence'].queryset = Sequence.objects.all().order_by("project__code", "code", "name")
 
         if 'project' in self.data:
             try:
@@ -76,9 +156,26 @@ class TaskForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        fields = ["artist", "task_name", "asset", "sequence", "shot", "task_type", "description", "status"]
+        fields = [
+            "artist",
+            "task_name",
+            "task_type",
+            "department",
+            "asset",
+            "sequence",
+            "shot",
+            "description",
+            "notes",
+            "status",
+            "priority",
+            "start_date",
+            "due_date",
+            "bid_hours",
+            "actual_hours",
+        ]
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 3})
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -129,7 +226,20 @@ class TaskUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        fields = ["task_name", "task_type", "description", "status"]
+        fields = [
+            "task_name",
+            "task_type",
+            "department",
+            "description",
+            "notes",
+            "status",
+            "priority",
+            "start_date",
+            "due_date",
+            "bid_hours",
+            "actual_hours",
+        ]
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 2})
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
         }

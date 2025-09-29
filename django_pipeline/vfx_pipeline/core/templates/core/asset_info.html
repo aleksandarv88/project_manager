@@ -1,9 +1,8 @@
-{% extends 'core/info_base.html' %}
+﻿{% extends 'core/info_base.html' %}
 
 {% block title %}Asset Info{% endblock %}
 
 {% block content %}
-
 <h1>Asset Info</h1>
 
 <div class="info-layout">
@@ -13,51 +12,75 @@
         <img src="{{ asset.image.url }}" alt="{{ asset.name }}">
       {% else %}
         <div style="width:100%; height:260px; display:flex; align-items:center; justify-content:center; background:#4c4c4c; color:#fff; font-size:48px; font-weight:600;">
-          {{ asset.username|slice:":1"|upper }}
+          {{ asset.name|slice:':1'|upper }}
         </div>
       {% endif %}
-      <span class="info-status-tag info-status-{{ asset.status }}">{{ asset.get_status_display }}</span>
+      <span class="info-status-tag info-status-{{ asset.status }}">{{ asset.get_status_display|default:asset.status|title }}</span>
     </div>
     <h2>{{ asset.name }}</h2>
-        <p style="background: #ffb347; color: #232323; display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 600; font-size: 0.98em; margin-bottom: 6px;">
-        Created {{ asset.created_at }}
-        </p>
-        <br>
-        <p style="background: #7fff7f; color: #232323; display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 600; font-size: 0.98em;">
-        Updated {{ asset.created_at }}
-        </p>
-    </br>
-        <br>
-        <div class="info-panel info-profile-panel">
-            <h2>Assigned Artists</h2>
-            {% for item in asset.assigned_artists_with_departments %}
-            {{ item.username }} ({{ item.department }})<br>
-            {% endfor %}
-        </div>
+    {% if asset.code %}<p class="info-meta-pill">Code: {{ asset.code }}</p>{% endif %}
+    <p class="info-meta-pill">Project: <a href="{% url 'project_info' asset.project.id %}">{{ asset.project.name }}</a></p>
+    <p class="info-meta-pill">Type: {{ asset.get_asset_type_display|default:asset.asset_type|title }}</p>
+    {% if asset.pipeline_step %}<p class="info-meta-pill">Pipeline Step: {{ asset.pipeline_step }}</p>{% endif %}
+    {% if asset.fps %}<p class="info-meta-pill">Native FPS: {{ asset.fps }}</p>{% endif %}
+    {% if asset.frame_start and asset.frame_end %}
+    <p class="info-meta-pill">Frames: {{ asset.frame_start }} → {{ asset.frame_end }}</p>
+    {% endif %}
+    <div class="info-profile-meta">
+      <div>
+        <div class="info-meta-label">Category</div>
+        <div class="info-meta-value">{{ asset.category|default:'-' }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Subtype</div>
+        <div class="info-meta-value">{{ asset.subtype|default:'-' }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Created</div>
+        <div class="info-meta-value">{{ asset.created_at|date:'Y-m-d H:i' }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Updated</div>
+        <div class="info-meta-value">{{ asset.updated_at|date:'Y-m-d H:i' }}</div>
+      </div>
     </div>
+    {% if asset.description %}
+    <div class="info-section">
+      <h3>Description</h3>
+      <p>{{ asset.description }}</p>
+    </div>
+    {% endif %}
 
+    <div class="info-section">
+      <h3>Assigned Artists</h3>
+      <ul class="info-list">
+        {% for item in asset.assigned_artists_with_departments %}
+          <li>{{ item.username }} ({{ item.department|upper }})</li>
+        {% empty %}
+          <li>No artists assigned.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
 
   <div class="info-panel info-form-panel">
     <h2>Edit Asset</h2>
     <form method="post" enctype="multipart/form-data" class="info-form">
       {% csrf_token %}
       {% for field in form %}
-        {% if field.name != "professional_email" %}
-          <div class="info-field-row">
-            {{ field.label_tag }}
-            {{ field }}
-            {% if field.errors %}
-              <div class="info-field-errors">
-                {% for error in field.errors %}{{ error }}<br>{% endfor %}
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
+        <div class="info-field-row">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.errors %}
+            <div class="info-field-errors">
+              {% for error in field.errors %}{{ error }}<br>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
       {% endfor %}
       <div class="info-profile-actions">
         <button type="submit" class="info-btn info-btn-secondary">Save Changes</button>
         <a href="{% url 'asset_list' %}" class="info-btn info-btn-danger">Back</a>
-        </div>
       </div>
     </form>
   </div>

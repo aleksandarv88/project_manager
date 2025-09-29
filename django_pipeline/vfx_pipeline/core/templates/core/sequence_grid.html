@@ -1,26 +1,31 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Sequences{% endblock %}
 
 {% block content %}
 <h1 class="mb-4">Sequences</h1>
-<a href="{% url 'add_sequence' %}" class="btn btn-success mb-3">➕ Add Sequence</a>
+<a href="{% url 'add_sequence' %}" class="btn btn-success mb-3">+ Add Sequence</a>
 
 <ul class="list-grid">
     {% for sequence in sequences %}
     <li class="list-card">
-        <a href="{% url 'edit_sequence' sequence.id %}" class="grid-card-link" title="Edit {{ sequence.name }}">
+        <a href="{% url 'sequence_info' sequence.id %}" class="grid-card-link" title="View {{ sequence.name }}">
             {% if sequence.image %}
                 <img src="{{ sequence.image.url }}" class="grid-img-circle" alt="{{ sequence.name }}">
             {% else %}
-                <div class="grid-placeholder">No Image</div>
+                <div class="grid-placeholder">{{ sequence.code|default:sequence.name|slice:':2'|upper }}</div>
             {% endif %}
             <div class="grid-name">{{ sequence.name }}</div>
+            {% if sequence.code %}<div class="grid-subtitle">{{ sequence.code }}</div>{% endif %}
+            <div class="grid-meta">{{ sequence.status|title }}</div>
         </a>
-        <a href="{% url 'delete_sequence' sequence.id %}" class="grid-delete-btn" title="Delete">❌</a>
+        <div class="grid-actions">
+            <a href="{% url 'edit_sequence' sequence.id %}" class="grid-action-btn">Edit</a>
+            <a href="{% url 'delete_sequence' sequence.id %}" class="grid-delete-btn">×</a>
+        </div>
     </li>
     {% empty %}
-    <li class="grid-list-card">No sequences yet.</li>
+    <li class="list-card">No sequences yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

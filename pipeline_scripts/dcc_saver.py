@@ -59,6 +59,10 @@ class PipelineContext(dict):
         return (self.get("project") or "").strip()
 
     @property
+    def project_id(self) -> int:
+        return int(self.get("project_id") or 0)
+
+    @property
     def artist_name(self) -> str:
         return (self.get("artist_name") or "").strip()
 
@@ -69,6 +73,18 @@ class PipelineContext(dict):
     @property
     def task_folder(self) -> str:
         return (self.get("task_folder") or "").strip()
+
+    @property
+    def asset_id(self) -> int:
+        return int(self.get("asset_id") or 0)
+
+    @property
+    def sequence_id(self) -> int:
+        return int(self.get("sequence_id") or 0)
+
+    @property
+    def shot_id(self) -> int:
+        return int(self.get("shot_id") or 0)
 
 
 def save_new_version() -> None:
@@ -180,6 +196,10 @@ def _collect_context() -> PipelineContext:
         ("PL_SEQUENCE", "SEQUENCE", "PIPELINE_SEQUENCE"): "sequence",
         ("PL_SHOT", "SHOT", "PIPELINE_SHOT"): "shot",
         ("PL_PROJECT", "PROJECT", "PIPELINE_PROJECT"): "project",
+        ("PL_PROJECT_ID", "PROJECT_ID", "PIPELINE_PROJECT_ID"): "project_id",
+        ("PL_ASSET_ID", "ASSET_ID", "PIPELINE_ASSET_ID"): "asset_id",
+        ("PL_SEQUENCE_ID", "SEQUENCE_ID", "PIPELINE_SEQUENCE_ID"): "sequence_id",
+        ("PL_SHOT_ID", "SHOT_ID", "PIPELINE_SHOT_ID"): "shot_id",
         ("PL_TASK_NAME", "TASK_NAME", "PIPELINE_TASK_NAME"): "task_name",
         ("PL_TASK_FOLDER", "TASK_FOLDER", "PIPELINE_TASK_FOLDER"): "task_folder",
         ("PL_ARTIST_NAME", "ARTIST_NAME", "PIPELINE_ARTIST_NAME"): "artist_name",

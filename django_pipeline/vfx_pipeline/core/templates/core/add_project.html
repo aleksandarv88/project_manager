@@ -1,24 +1,26 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 {% block title %}Add Project{% endblock %}
 {% block content %}
 <div class="form-card">
   <h2>Add Project</h2>
   <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
-    <div class="form-group">
-      <label for="id_name">Project Name</label>
-      {{ form.name }}
-    </div>
-    <div class="form-group">
-      <label for="id_base_path">Base Path</label>
-      {{ form.base_path }}
-    </div>
-    <div class="form-group">
-      <label for="id_image">Image</label>
-      {{ form.image }}
-    </div>
-    <button type="submit" class="btn btn-secondary">Add Project</button>
+    {% if form.non_field_errors %}
+      <div class="field-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}
+          <div class="field-errors">
+            {% for error in field.errors %}{{ error }}<br>{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-secondary">Save Project</button>
   </form>
-  <p><a href="{% url 'project_list' %}">⬅ Back to Projects</a></p>
+  <p><a href="{% url 'project_list' %}">← Back to Projects</a></p>
 </div>
 {% endblock %}

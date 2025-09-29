@@ -1,51 +1,26 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 {% block title %}Add Shot{% endblock %}
 {% block content %}
 <div class="form-card">
   <h2>Add Shot</h2>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    <div class="form-group">
-      <label for="id_project">Project</label>
-      {{ form.project }}
-    </div>
-    <div class="form-group">
-      <label for="id_sequence">Sequence</label>
-      {{ form.sequence }}
-    </div>
-    <div class="form-group">
-      <label for="id_name">Shot Name</label>
-      {{ form.name }}
-    </div>
-    <div class="form-group">
-      <label for="id_image">Image</label>
-      {{ form.image }}
-    </div>
-    <button type="submit" class="btn btn-secondary">Add Shot</button>
+    {% if form.non_field_errors %}
+      <div class="field-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}
+          <div class="field-errors">
+            {% for error in field.errors %}{{ error }}<br>{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-secondary">Save Shot</button>
   </form>
-  <p><a href="{% url 'shot_list' %}">⬅ Back to Shots</a></p>
+  <p><a href="{% url 'shot_list' %}">← Back to Shots</a></p>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-  $("#id_project").change(function() {
-    var projectId = $(this).val();
-    $.ajax({
-      url: "{% url 'api_sequences' %}",
-      data: {
-        'project_id': projectId
-      },
-      success: function(data) {
-        var select = $("#id_sequence");
-        select.empty();
-        select.append('<option value="">---------</option>');
-        data.forEach(function(seq) {
-          select.append('<option value="' + seq.id + '">' + seq.name + '</option>');
-        });
-      }
-    });
-  });
-});
-</script>
 {% endblock %}

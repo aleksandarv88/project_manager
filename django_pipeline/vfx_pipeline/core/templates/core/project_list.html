@@ -1,31 +1,31 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Projects{% endblock %}
 
 {% block content %}
 <h1>Projects</h1>
-<a href="{% url 'add_project' %}">➕ Add Project</a>
+<a href="{% url 'add_project' %}" class="btn btn-success mb-3">+ Add Project</a>
 
-<ul>
+<ul class="list-grid">
     {% for project in projects %}
     <li class="list-card">
-        <a href="{% url 'edit_project' project.id %}" class="card-link" style="
-            display: block;
-            width: 100%;
-            height: 100%;
-            color: inherit;
-            text-decoration: none;
-            padding: 15px;
-        ">
-            {{ project.name }}
+        <a href="{% url 'project_info' project.id %}" class="grid-card-link" title="View {{ project.name }}">
             {% if project.image %}
-                <br><img src="{{ project.image.url }}" width="150">
+                <img src="{{ project.image.url }}" class="grid-img-circle" alt="{{ project.name }}">
+            {% else %}
+                <div class="grid-placeholder">{{ project.name|slice:':2'|upper }}</div>
             {% endif %}
+            <div class="grid-name">{{ project.name }}</div>
+            {% if project.code %}<div class="grid-subtitle">{{ project.code }}</div>{% endif %}
+            <div class="grid-meta">{{ project.status|title }}</div>
         </a>
-        <a href="{% url 'delete_project' project.id %}" class="delete-btn">❌ Delete</a>
+        <div class="grid-actions">
+            <a href="{% url 'edit_project' project.id %}" class="grid-action-btn">Edit</a>
+            <a href="{% url 'delete_project' project.id %}" class="grid-delete-btn">×</a>
+        </div>
     </li>
     {% empty %}
-    <li>No projects yet.</li>
+    <li class="list-card">No projects yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

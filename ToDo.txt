@@ -1,0 +1,3 @@
+Make publish assets from houdini with digital asset and python
+Make tempaltes for making the usd files and publishing
+Make publish shot/seq form houdini with template

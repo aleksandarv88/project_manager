@@ -1,0 +1,129 @@
+﻿{% extends 'core/info_base.html' %}
+
+{% block title %}Shot Info{% endblock %}
+
+{% block content %}
+<h1>Shot Info</h1>
+
+<div class="info-layout">
+  <div class="info-panel info-profile-panel">
+    <div class="info-avatar-wrapper">
+      {% if shot.image %}
+        <img src="{{ shot.image.url }}" alt="{{ shot.name }}">
+      {% else %}
+        <div style="width:100%; height:260px; display:flex; align-items:center; justify-content:center; background:#2f2f36; color:#fff; font-size:48px; font-weight:600;">
+          {{ shot.name|slice:':1'|upper }}
+        </div>
+      {% endif %}
+      <span class="info-status-tag info-status-{{ shot.status }}">{{ shot.get_status_display|default:shot.status|title }}</span>
+    </div>
+    <h2>{{ shot.name }}</h2>
+    {% if shot.code %}<p class="info-meta-pill">Code: {{ shot.code }}</p>{% endif %}
+    <p class="info-meta-pill">Sequence: <a href="{% url 'sequence_info' shot.sequence.id %}">{{ shot.sequence.code|default:shot.sequence.name }}</a></p>
+    <p class="info-meta-pill">Project: <a href="{% url 'project_info' shot.project.id %}">{{ shot.project.name }}</a></p>
+    <p class="info-meta-pill">Frames: {{ shot.frame_start }} → {{ shot.frame_end }} (handles {{ shot.handles }})</p>
+    <p class="info-meta-pill">FPS: {{ shot.fps }}</p>
+    {% if shot.cut_in or shot.cut_out %}
+    <p class="info-meta-pill">Cut: {{ shot.cut_in|default:'-' }} → {{ shot.cut_out|default:'-' }}</p>
+    {% endif %}
+    <div class="info-profile-meta">
+      <div>
+        <div class="info-meta-label">Color Space</div>
+        <div class="info-meta-value">{{ shot.color_space|default:shot.sequence.color_space }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Shot Type</div>
+        <div class="info-meta-value">{{ shot.shot_type|default:'-' }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Created</div>
+        <div class="info-meta-value">{{ shot.created_at|date:'Y-m-d H:i' }}</div>
+      </div>
+      <div>
+        <div class="info-meta-label">Updated</div>
+        <div class="info-meta-value">{{ shot.updated_at|date:'Y-m-d H:i' }}</div>
+      </div>
+    </div>
+    {% if shot.description %}
+    <div class="info-section">
+      <h3>Description</h3>
+      <p>{{ shot.description }}</p>
+    </div>
+    {% endif %}
+    {% if shot.notes %}
+    <div class="info-section">
+      <h3>Notes</h3>
+      <p>{{ shot.notes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="info-section">
+      <h3>Assets Used</h3>
+      <ul class="info-list">
+        {% for usage in usages %}
+          <li><a href="{% url 'asset_info' usage.asset.id %}">{{ usage.asset.code|default:usage.asset.name }}</a>{% if usage.publish %} · {{ usage.publish.label|default:'v' }}{{ usage.publish.version|default:0|stringformat:"03d" }}{% endif %} · {{ usage.status|title }}</li>
+        {% empty %}
+          <li>No asset usages logged.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="info-panel info-form-panel">
+    <h2>Edit Shot</h2>
+    <form method="post" enctype="multipart/form-data" class="info-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="info-field-row">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.errors %}
+            <div class="info-field-errors">
+              {% for error in field.errors %}{{ error }}<br>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="info-profile-actions">
+        <button type="submit" class="info-btn info-btn-secondary">Save Changes</button>
+        <a href="{% url 'shot_list' %}" class="info-btn info-btn-danger">Back</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="info-wide-panels">
+  <div class="info-panel">
+    <h2>Active Tasks</h2>
+    <ul class="info-list">
+      {% for task in tasks %}
+        <li>{{ task.task_name|default:task.task_type }} — {{ task.status|title }}{% if task.artist %} · {{ task.artist.username }}{% endif %}{% if task.asset %} · Asset <a href="{% url 'asset_info' task.asset.id %}">{{ task.asset.code|default:task.asset.name }}</a>{% endif %}</li>
+      {% empty %}
+        <li>No tasks yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="info-panel">
+    <h2>Recent Publishes</h2>
+    <ul class="info-list">
+      {% for publish in publishes %}
+        <li>
+          <strong>
+            {% if publish.label %}
+              {{ publish.label }}
+            {% else %}
+              v{{ publish.version|default:0|stringformat:"03d" }} i{{ publish.iteration|default:0|stringformat:"03d" }}
+            {% endif %}
+          </strong>
+          {% if publish.task %} · Task {{ publish.task.task_name|default:publish.task.task_type }}{% endif %}
+          {% if publish.created_by %} · {{ publish.created_by.username }}{% endif %}
+          · {{ publish.published_at|date:'Y-m-d H:i' }}
+        </li>
+      {% empty %}
+        <li>No publishes yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% endblock %}

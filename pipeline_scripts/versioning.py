@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import psycopg2
@@ -20,6 +22,27 @@ API_BASE_ENV = "PIPELINE_API_BASE"
 
 def _use_api() -> bool:
     return bool(os.environ.get(API_BASE_ENV))
+
+
+def _current_target_payload() -> Dict[str, Optional[str]]:
+    env = os.environ
+    payload: Dict[str, Optional[str]] = {}
+    project_id = env.get("PIPELINE_PROJECT_ID") or env.get("PROJECT_ID")
+    if project_id:
+        payload["project_id"] = project_id
+    if env.get("PIPELINE_ASSET_ID") or env.get("ASSET_ID"):
+        payload["target_type"] = "asset"
+        payload["target_id"] = env.get("PIPELINE_ASSET_ID") or env.get("ASSET_ID")
+    elif env.get("PIPELINE_SHOT_ID") or env.get("SHOT_ID"):
+        payload["target_type"] = "shot"
+        payload["target_id"] = env.get("PIPELINE_SHOT_ID") or env.get("SHOT_ID")
+    elif env.get("PIPELINE_SEQUENCE_ID") or env.get("SEQUENCE_ID"):
+        payload["target_type"] = "sequence"
+        payload["target_id"] = env.get("PIPELINE_SEQUENCE_ID") or env.get("SEQUENCE_ID")
+    elif project_id:
+        payload["target_type"] = "project"
+        payload["target_id"] = project_id
+    return payload
 
 
 def get_scene_table_name() -> str:
@@ -90,7 +113,12 @@ def fetch_scenes(
     table_name: Optional[str] = None,
 ) -> List[Dict[str, object]]:
     if _use_api() and api_client:
-        resp = api_client.api_get("/api/scenes/", {"task_id": task_id, "software": software})
+        payload: Dict[str, Optional[str]] = {
+            "task_id": str(task_id),
+            "software": software,
+        }
+        payload.update(_current_target_payload())
+        resp = api_client.api_get("/api/publishes/", payload)
         if resp.get("ok"):
             return resp.get("data", [])  # type: ignore[return-value]
         raise RuntimeError(f"API error: {resp}")
@@ -162,7 +190,13 @@ def next_numbers(
     table_name: Optional[str] = None,
 ) -> Tuple[int, int]:
     if _use_api() and api_client:
-        resp = api_client.api_get("/api/scenes/next/", {"task_id": task_id, "software": software, "bump": bump})
+        payload: Dict[str, Optional[str]] = {
+            "task_id": str(task_id),
+            "software": software,
+            "bump": bump,
+        }
+        payload.update(_current_target_payload())
+        resp = api_client.api_get("/api/publishes/next/", payload)
         if resp.get("ok"):
             data = resp.get("data", {})
             return int(data.get("version", 0)), int(data.get("iteration", 0))
@@ -187,16 +221,28 @@ def record_scene(
     table_name: Optional[str] = None,
 ) -> None:
     if _use_api() and api_client:
+        payload: Dict[str, Optional[str]] = {
+            "task_id": str(task_id),
+            "artist_id": str(artist_id),
+            "software": software,
+            "version": str(version),
+            "iteration": str(iteration),
+            "label": Path(file_path).name,
+        }
+        payload.update(_current_target_payload())
+        payload["components"] = json.dumps(
+            [
+                {
+                    "name": "scene",
+                    "component_type": "scene",
+                    "file_path": file_path,
+                }
+            ]
+        )
+        payload["metadata"] = json.dumps({"software": software, "path": file_path})
         resp = api_client.api_post(
-            "/api/scenes/record/",
-            {
-                "task_id": task_id,
-                "artist_id": artist_id,
-                "software": software,
-                "file_path": file_path,
-                "version": version,
-                "iteration": iteration,
-            },
+            "/api/publishes/",
+            payload,
         )
         if not resp.get("ok"):
             raise RuntimeError(f"API error: {resp}")

@@ -1,26 +1,31 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Shots{% endblock %}
 
 {% block content %}
 <h1 class="mb-4">Shots</h1>
-<a href="{% url 'add_shot' %}" class="btn btn-success mb-3">➕ Add Shot</a>
+<a href="{% url 'add_shot' %}" class="btn btn-success mb-3">+ Add Shot</a>
 
 <ul class="list-grid">
     {% for shot in shots %}
     <li class="list-card">
-        <a href="{% url 'edit_shot' shot.id %}" class="grid-card-link" title="Edit {{ shot.name }}">
+        <a href="{% url 'shot_info' shot.id %}" class="grid-card-link" title="View {{ shot.name }}">
             {% if shot.image %}
                 <img src="{{ shot.image.url }}" class="grid-img-circle" alt="{{ shot.name }}">
             {% else %}
-                <div class="grid-placeholder">No Image</div>
+                <div class="grid-placeholder">{{ shot.code|default:shot.name|slice:':2'|upper }}</div>
             {% endif %}
             <div class="grid-name">{{ shot.name }}</div>
+            {% if shot.code %}<div class="grid-subtitle">{{ shot.code }}</div>{% endif %}
+            <div class="grid-meta">{{ shot.status|title }}</div>
         </a>
-        <a href="{% url 'delete_shot' shot.id %}" class="grid-delete-btn" title="Delete">❌</a>
+        <div class="grid-actions">
+            <a href="{% url 'edit_shot' shot.id %}" class="grid-action-btn">Edit</a>
+            <a href="{% url 'delete_shot' shot.id %}" class="grid-delete-btn">×</a>
+        </div>
     </li>
     {% empty %}
-    <li class="grid-list-card">No shots yet.</li>
+    <li class="list-card">No shots yet.</li>
     {% endfor %}
 </ul>
 {% endblock %}

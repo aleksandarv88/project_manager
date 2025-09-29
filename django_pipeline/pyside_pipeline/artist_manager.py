@@ -213,6 +213,7 @@ class TaskRecord:
     shot_name: str
     project_name: str
     project_base_path: str
+    project_id: Optional[int]
     department: str
     context: str  # asset | shot | sequence | task
 
@@ -613,15 +614,18 @@ class FX3XManager(QWidget):
                 a.id AS asset_id,
                 a.name AS asset_name,
                 a.asset_type AS asset_type,
+                ap.id AS asset_project_id,
                 ap.name AS asset_project_name,
                 ap.base_path AS asset_project_base_path,
                 seq.id AS sequence_id,
                 seq.name AS sequence_name,
+                sp.id AS sequence_project_id,
                 sp.name AS sequence_project_name,
                 sp.base_path AS sequence_project_base_path,
                 shot.id AS shot_id,
                 shot.name AS shot_name,
                 shseq.name AS shot_sequence_name,
+                shproj.id AS shot_project_id,
                 shproj.name AS shot_project_name,
                 shproj.base_path AS shot_project_base_path
             FROM core_task t
@@ -651,6 +655,11 @@ class FX3XManager(QWidget):
                 or row.get("sequence_project_base_path")
                 or ""
             )
+            project_id_raw = (
+                row.get("shot_project_id")
+                or row.get("asset_project_id")
+                or row.get("sequence_project_id")
+            )
             has_asset = row.get("asset_id") is not None
             has_shot = row.get("shot_id") is not None
             has_sequence = row.get("sequence_id") is not None or row.get("shot_sequence_name") is not None
@@ -675,6 +684,7 @@ class FX3XManager(QWidget):
                 shot_name=str(row.get("shot_name") or ""),
                 project_name=str(project_name),
                 project_base_path=str(project_base_path),
+                project_id=int(project_id_raw) if project_id_raw is not None else None,
                 department=resolve_department(str(row.get("task_type") or "")),
                 context=context,
             )
@@ -1035,11 +1045,17 @@ class FX3XManager(QWidget):
             base_root = Path(task.project_base_path) if task.project_base_path else project_path.parent
             env["PIPELINE_PROJECT_ROOT"] = str(base_root)
             env["PROJECT_ROOT"] = str(base_root)
+        if task.project_id:
+            env["PIPELINE_PROJECT_ID"] = str(task.project_id)
+            env["PROJECT_ID"] = str(task.project_id)
         if task.context == "asset" and task.asset_name:
             env["PIPELINE_ASSET"] = task.asset_name
             env["ASSET"] = task.asset_name
             if EV:
                 env[EV.ASSET] = task.asset_name
+            if task.asset_id:
+                env["PIPELINE_ASSET_ID"] = str(task.asset_id)
+                env["ASSET_ID"] = str(task.asset_id)
             if task.asset_type:
                 env["PIPELINE_ASSET_TYPE"] = task.asset_type
                 env["ASSET_TYPE"] = task.asset_type
@@ -1050,11 +1066,17 @@ class FX3XManager(QWidget):
             env["SEQUENCE"] = task.sequence_name
             if EV:
                 env[EV.SEQUENCE] = task.sequence_name
+            if task.sequence_id:
+                env["PIPELINE_SEQUENCE_ID"] = str(task.sequence_id)
+                env["SEQUENCE_ID"] = str(task.sequence_id)
         if task.context == "shot" and task.shot_name:
             env["PIPELINE_SHOT"] = task.shot_name
             env["SHOT"] = task.shot_name
             if EV:
                 env[EV.SHOT] = task.shot_name
+            if task.shot_id:
+                env["PIPELINE_SHOT_ID"] = str(task.shot_id)
+                env["SHOT_ID"] = str(task.shot_id)
             # Provide shot root directory (<project>/sequences/<seq>/<shot>)
             if project_path and task.sequence_name:
                 shot_root = project_path / "sequences" / task.sequence_name / task.shot_name
