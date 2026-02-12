@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
@@ -81,6 +83,37 @@ def _parse_metadata(value: Any) -> Dict[str, Any]:
         except Exception:
             return {}
     return {}
+
+
+def _normalize_file_path(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        normalized = os.path.normpath(raw)
+    except Exception:
+        normalized = raw
+    return Path(normalized).as_posix()
+
+
+def _is_local_request(request: HttpRequest) -> bool:
+    remote_addr = (request.META.get("REMOTE_ADDR") or "").strip()
+    try:
+        host = (request.get_host() or "").split(":")[0].strip().lower()
+    except Exception:
+        host = ""
+    return remote_addr in {"127.0.0.1", "::1", "localhost"} or host in {"127.0.0.1", "localhost"}
+
+
+def _has_valid_pm_token(request: HttpRequest) -> bool:
+    expected = (os.environ.get("PM_API_TOKEN") or "").strip()
+    if not expected:
+        return False
+    provided = (
+        request.headers.get("X-PM-Token")
+        or request.headers.get("Authorization", "").replace("Bearer ", "", 1)
+    )
+    return str(provided or "").strip() == expected
 
 
 # -------- Projects --------
@@ -675,12 +708,14 @@ def _publish_queryset(target_type: str, target_id: str, task_id: Optional[str], 
 
 
 def _next_publish_numbers(qs: models.QuerySet, bump: str) -> tuple[int, int]:
-    latest = qs.order_by("-version", "-iteration").first()
+    latest = qs.order_by("-source_version", "-source_iteration", "-id").first()
     if not latest:
         return 1, 1
+    current_version = int(latest.source_version or 0)
+    current_iteration = int(latest.source_iteration or 0)
     if bump == "version":
-        return latest.version + 1, 1
-    return latest.version, latest.iteration + 1
+        return current_version + 1, 1
+    return current_version if current_version > 0 else 1, current_iteration + 1 if current_iteration > 0 else 1
 
 
 @csrf_exempt
@@ -708,6 +743,8 @@ def api_publishes(request: HttpRequest):
     if request.method == "GET":
         qs = Publish.objects.select_related("task", "created_by").all()
         software_filter = (params.get("software") or "").strip() or None
+        if task_id:
+            qs = qs.filter(task_id=task_id)
         if target_type and target_id:
             qs = _publish_queryset(target_type, target_id, task_id, software_filter)
         if params.get("project_id"):
@@ -719,6 +756,7 @@ def api_publishes(request: HttpRequest):
         for publish in qs.order_by("-published_at"):
             item = {
                 "id": publish.id,
+                "publish_id": publish.id,
                 "project_id": publish.project_id,
                 "target_type": publish.target_content_type.model,
                 "target_id": publish.target_object_id,
@@ -726,9 +764,15 @@ def api_publishes(request: HttpRequest):
                 "created_by": publish.created_by_id,
                 "software": publish.software,
                 "label": publish.label,
-                "version": publish.version,
-                "iteration": publish.iteration,
+                "source_version": publish.source_version,
+                "source_iteration": publish.source_iteration,
+                # Backward-compatible keys for older clients.
+                "version": publish.source_version,
+                "iteration": publish.source_iteration,
                 "status": publish.status,
+                "item_usd_path": publish.item_usd_path,
+                "asset_usd_path": publish.asset_usd_path,
+                "preview_path": publish.preview_path,
                 "comment": publish.comment,
                 "metadata": publish.metadata,
                 "published_at": publish.published_at,
@@ -752,6 +796,23 @@ def api_publishes(request: HttpRequest):
         return _ok(data)
 
     # POST -> create publish
+    if not (_is_local_request(request) or _has_valid_pm_token(request)):
+        return _err("Forbidden", status=403)
+
+    item_usd_path = _normalize_file_path(params.get("item_usd_path"))
+    asset_usd_path = _normalize_file_path(params.get("asset_usd_path"))
+    preview_path = _normalize_file_path(params.get("preview_path"))
+
+    if not task_id:
+        return _err("Missing task_id")
+    # Backward-compatible behavior:
+    # - Existing scene/version saver posts components without item/asset USD fields.
+    # - Part-publish flow posts both item_usd_path + asset_usd_path.
+    has_item = bool(item_usd_path)
+    has_asset = bool(asset_usd_path)
+    if has_item ^ has_asset:
+        return _err("Provide both item_usd_path and asset_usd_path, or neither.")
+
     task = None
     if task_id:
         task = Task.objects.select_related(
@@ -802,11 +863,21 @@ def api_publishes(request: HttpRequest):
         artist = Artist.objects.filter(id=params.get("artist_id")).first()
 
     bump = (params.get("bump") or "iteration").lower()
-    desired_version = _parse_int(params.get("version"))
-    desired_iteration = _parse_int(params.get("iteration"))
-    if not (desired_version and desired_iteration):
+    source_version = _parse_int(
+        params.get("source_version")
+        or params.get("houdini_version")
+        or params.get("dcc_version")
+        or params.get("version")
+    )
+    source_iteration = _parse_int(
+        params.get("source_iteration")
+        or params.get("houdini_iteration")
+        or params.get("dcc_iteration")
+        or params.get("iteration")
+    )
+    if not (source_version and source_iteration):
         qs = _publish_queryset(target_type, target_id, task_id, (params.get("software") or "").strip() or None)
-        desired_version, desired_iteration = _next_publish_numbers(qs, bump)
+        source_version, source_iteration = _next_publish_numbers(qs, bump)
 
     publish = Publish.objects.create(
         project=project,
@@ -816,9 +887,12 @@ def api_publishes(request: HttpRequest):
         created_by=artist,
         software=(params.get("software") or "").strip(),
         label=(params.get("label") or "").strip(),
-        version=desired_version,
-        iteration=desired_iteration,
+        source_version=source_version,
+        source_iteration=source_iteration,
         status=(params.get("status") or "pending").strip() or "pending",
+        item_usd_path=item_usd_path,
+        asset_usd_path=asset_usd_path,
+        preview_path=preview_path,
         comment=(params.get("comment") or "").strip(),
         metadata=_parse_metadata(params.get("metadata")),
     )
@@ -854,6 +928,33 @@ def api_publishes(request: HttpRequest):
                 frame_end=_parse_int(component.get("frame_end")),
                 metadata=_parse_metadata(component.get("metadata")),
             )
+    else:
+        components = []
+
+    if item_usd_path:
+        PublishComponent.objects.create(
+            publish=publish,
+            name="item_usd",
+            component_type="data",
+            file_path=item_usd_path,
+            metadata={"role": "item_usd"},
+        )
+    if asset_usd_path:
+        PublishComponent.objects.create(
+            publish=publish,
+            name="asset_usd",
+            component_type="data",
+            file_path=asset_usd_path,
+            metadata={"role": "asset_usd"},
+        )
+    if preview_path:
+        PublishComponent.objects.create(
+            publish=publish,
+            name="preview",
+            component_type="preview",
+            file_path=preview_path,
+            metadata={"role": "preview"},
+        )
 
     links = params.get("links")
     if isinstance(links, str):
@@ -879,6 +980,18 @@ def api_publishes(request: HttpRequest):
                 defaults={"notes": link.get("notes", "")},
             )
 
-    return _ok({"id": publish.id, "version": publish.version, "iteration": publish.iteration, "is_latest": publish.is_latest})
+    return _ok(
+        {
+            "publish_id": publish.id,
+            "id": publish.id,
+            "source_version": publish.source_version,
+            "source_iteration": publish.source_iteration,
+            # Backward-compatible keys for older clients.
+            "version": publish.source_version,
+            "iteration": publish.source_iteration,
+            "is_latest": publish.is_latest,
+        },
+        status=201,
+    )
 
 

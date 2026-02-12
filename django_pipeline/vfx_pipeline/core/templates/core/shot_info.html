@@ -61,7 +61,7 @@
       <h3>Assets Used</h3>
       <ul class="info-list">
         {% for usage in usages %}
-          <li><a href="{% url 'asset_info' usage.asset.id %}">{{ usage.asset.code|default:usage.asset.name }}</a>{% if usage.publish %} · {{ usage.publish.label|default:'v' }}{{ usage.publish.version|default:0|stringformat:"03d" }}{% endif %} · {{ usage.status|title }}</li>
+          <li><a href="{% url 'asset_info' usage.asset.id %}">{{ usage.asset.code|default:usage.asset.name }}</a>{% if usage.publish %} · {{ usage.publish.label|default:'#' }}{{ usage.publish.id }}{% endif %} · {{ usage.status|title }}</li>
         {% empty %}
           <li>No asset usages logged.</li>
         {% endfor %}
@@ -112,7 +112,7 @@
             {% if publish.label %}
               {{ publish.label }}
             {% else %}
-              v{{ publish.version|default:0|stringformat:"03d" }} i{{ publish.iteration|default:0|stringformat:"03d" }}
+              #{{ publish.id }}{% if publish.source_version or publish.source_iteration %} (H {{ publish.source_version|default:0|stringformat:"03d" }}.{{ publish.source_iteration|default:0|stringformat:"03d" }}){% endif %}
             {% endif %}
           </strong>
           {% if publish.task %} · Task {{ publish.task.task_name|default:publish.task.task_type }}{% endif %}

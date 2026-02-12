@@ -20,6 +20,8 @@ urlpatterns = [
     path('assets/<int:asset_id>', views.asset_info, name='asset_info'),
     path('assets/delete/<int:pk>/', views.delete_asset, name='delete_asset'),
     path('assets/edit/<int:pk>/', views.add_asset, name='edit_asset'),
+    path('publishes/', views.publish_list_page, name='publish_list_page'),
+    path('publishes/detail/', views.publish_detail_page, name='publish_detail_page'),
 
 
     # Sequences

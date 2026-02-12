@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+import re
 
 import psycopg2
 from psycopg2 import sql
@@ -123,8 +124,36 @@ DEFAULT_DB_CONFIG: Dict[str, str] = {
     "port": "5432",
 }
 
+
+def _parse_houdini_version(path: Path) -> tuple:
+    match = re.search(r"Houdini\s+(\d+(?:\.\d+)*)", str(path))
+    if not match:
+        return (0,)
+    parts: List[int] = []
+    for token in match.group(1).split("."):
+        try:
+            parts.append(int(token))
+        except ValueError:
+            parts.append(0)
+    return tuple(parts) if parts else (0,)
+
+
+def _resolve_houdini_executable() -> Path:
+    override = os.environ.get("PIPELINE_HOUDINI_EXE", "").strip()
+    if override:
+        return Path(override)
+
+    root = Path(r"C:\Program Files\Side Effects Software")
+    candidates = list(root.glob("Houdini */bin/houdini.exe"))
+    if candidates:
+        candidates.sort(key=_parse_houdini_version, reverse=True)
+        return candidates[0]
+
+    return Path(r"C:\\Program Files\\Side Effects Software\\Houdini 21.0.440\\bin\\houdini.exe")
+
+
 SOFTWARE_EXECUTABLES: Dict[str, Path] = {
-    "houdini": Path(r"C:\\Program Files\\Side Effects Software\\Houdini 21.0.440\\bin\\houdini.exe"),
+    "houdini": _resolve_houdini_executable(),
     "maya": Path(r"C:\\Program Files\\Autodesk\\Maya2023\\bin\\maya.exe"),
 }
 
@@ -882,23 +911,91 @@ class FX3XManager(QWidget):
         software = self.software_combo.currentData()
         if not software:
             return
-        query = sql.SQL(
+        rows: List[Dict[str, object]] = []
+
+        # Legacy scene-table records.
+        try:
+            query = sql.SQL(
+                """
+                SELECT id, task_id, artist_id, software, file_path, version, iteration, created_at, updated_at
+                FROM {table}
+                WHERE task_id = %s AND software = %s AND artist_id = %s
+                ORDER BY version DESC, iteration DESC, id DESC;
+                """
+            ).format(table=sql.Identifier(SCENE_TABLE_NAME))
+            rows.extend(
+                self.query_dicts(
+                    query.as_string(self.conn),
+                    (
+                        self.current_task.id,
+                        software,
+                        self.current_task.artist_id,
+                    ),
+                )
+            )
+        except Exception:
+            # Keep UI functional even when legacy table is absent/unavailable.
+            pass
+
+        # New publish-based records (scene component preferred, then USD publish paths).
+        publish_rows = self.query_dicts(
             """
-            SELECT id, task_id, artist_id, software, file_path, version, iteration, created_at, updated_at
-            FROM {table}
-            WHERE task_id = %s AND software = %s AND artist_id = %s
-            ORDER BY version DESC, iteration DESC, id DESC;
-            """
-        ).format(table=sql.Identifier(SCENE_TABLE_NAME))
-        rows = self.query_dicts(
-            query.as_string(self.conn),
+            SELECT
+                p.id,
+                p.task_id,
+                COALESCE(p.created_by_id, 0) AS artist_id,
+                p.software,
+                COALESCE(pc.file_path, p.item_usd_path, p.asset_usd_path) AS file_path,
+                COALESCE(p.source_version, 0) AS version,
+                COALESCE(p.source_iteration, 0) AS iteration,
+                p.published_at AS created_at,
+                p.updated_at
+            FROM core_publish p
+            LEFT JOIN LATERAL (
+                SELECT c.file_path
+                FROM core_publishcomponent c
+                WHERE c.publish_id = p.id
+                  AND c.component_type = 'scene'
+                ORDER BY c.id ASC
+                LIMIT 1
+            ) pc ON TRUE
+            WHERE p.task_id = %s
+              AND p.software = %s
+              AND (p.created_by_id = %s OR p.created_by_id IS NULL)
+            ORDER BY p.source_version DESC, p.source_iteration DESC, p.id DESC;
+            """,
             (
                 self.current_task.id,
                 software,
                 self.current_task.artist_id,
             ),
         )
+        rows.extend(publish_rows)
+
+        # Deduplicate by identity of scene entry.
+        dedup: Dict[tuple, Dict[str, object]] = {}
         for row in rows:
+            key = (
+                int(row.get("version") or 0),
+                int(row.get("iteration") or 0),
+                str(row.get("software") or "").lower(),
+                int(row.get("artist_id") or 0),
+                str(row.get("file_path") or ""),
+            )
+            if not key[-1]:
+                continue
+            if key not in dedup:
+                dedup[key] = row
+        ordered_rows = sorted(
+            dedup.values(),
+            key=lambda row: (
+                int(row.get("version") or 0),
+                int(row.get("iteration") or 0),
+                int(row.get("id") or 0),
+            ),
+            reverse=True,
+        )
+        for row in ordered_rows:
             record = SceneRecord(
                 id=int(row["id"]),
                 file_path=Path(str(row.get("file_path"))),
@@ -1014,14 +1111,17 @@ class FX3XManager(QWidget):
         if EV:
             env[EV.SOFTWARE] = software
         # Ensure API base is available to DCCs (falls back to localhost dev server)
-        api_base = os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL") or "http://127.0.0.1:8000"
+        api_base = os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL") or "http://127.0.0.1:8002"
         env.setdefault("PIPELINE_API_BASE", api_base)
+        env.setdefault("PM_API_URL", f"{api_base.rstrip('/')}/api/publishes/")
         env["PIPELINE_TASK_ID"] = str(task.id)
         env["TASK_ID"] = str(task.id)
+        env["PM_TASK_ID"] = str(task.id)
         if EV:
             env[EV.TASK_ID] = str(task.id)
         env["PIPELINE_ARTIST_ID"] = str(task.artist_id)
         env["ARTIST_ID"] = str(task.artist_id)
+        env["PM_ARTIST"] = task.artist_name or str(task.artist_id)
         if EV:
             env[EV.ARTIST_ID] = str(task.artist_id)
         if task.artist_name:
@@ -1035,6 +1135,7 @@ class FX3XManager(QWidget):
         if task.project_name:
             env["PIPELINE_PROJECT"] = task.project_name
             env["PROJECT"] = task.project_name
+            env["PM_PROJECT"] = task.project_name
             if EV:
                 env[EV.PROJECT] = task.project_name
         project_path = task.project_path()
@@ -1064,6 +1165,7 @@ class FX3XManager(QWidget):
         if task.sequence_name:
             env["PIPELINE_SEQUENCE"] = task.sequence_name
             env["SEQUENCE"] = task.sequence_name
+            env["PM_SEQ"] = task.sequence_name
             if EV:
                 env[EV.SEQUENCE] = task.sequence_name
             if task.sequence_id:
@@ -1072,6 +1174,7 @@ class FX3XManager(QWidget):
         if task.context == "shot" and task.shot_name:
             env["PIPELINE_SHOT"] = task.shot_name
             env["SHOT"] = task.shot_name
+            env["PM_SHOT"] = task.shot_name
             if EV:
                 env[EV.SHOT] = task.shot_name
             if task.shot_id:

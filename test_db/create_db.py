@@ -1,3 +1,4 @@
+import os
 import psycopg2
 
 def create_database():
@@ -5,7 +6,7 @@ def create_database():
         host = "localhost",
         dbname = "postgres",
         user = "postgres",
-        password = "Ifmatoodlon@321"  # Replace with your actual password
+        password = os.environ.get("PM_DB_PASSWORD", os.environ.get("PIPELINE_DB_PASSWORD", ""))
     ) # entering the building
     conn.autocommit = True #explain this to me 
     cur = conn.cursor() # getting the clipboard

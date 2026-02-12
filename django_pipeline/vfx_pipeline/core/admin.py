@@ -62,7 +62,21 @@ admin.site.register(SequenceTag)
 admin.site.register(ShotTag)
 admin.site.register(TaskAssignment)
 admin.site.register(AssetArtistAssignment)
-admin.site.register(Publish)
+@admin.register(Publish)
+class PublishAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "task",
+        "project",
+        "status",
+        "source_version",
+        "source_iteration",
+        "created_at",
+    )
+    search_fields = ("label", "task__task_name", "task__id", "project__name")
+    list_filter = ("status", "software", "created_at")
+
+
 admin.site.register(PublishComponent)
 admin.site.register(VersionLink)
 admin.site.register(ShotAssetUsage)

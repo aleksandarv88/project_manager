@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %}
+{% block title %}Publish Detail{% endblock %}
+
+{% block content %}
+<h1>Publish Detail</h1>
+<p><strong>Asset:</strong> {{ asset_name }}</p>
+<p><strong>Part:</strong> {{ part_name }}</p>
+<p><a href="{% url 'publish_list_page' %}{% if project_id %}?project={{ project_id }}{% endif %}">Back to publishes</a></p>
+
+{% if latest %}
+  <h2>Latest</h2>
+  <table>
+    <tbody>
+      <tr><th>Project</th><td>{{ latest.publish.project.name }}</td></tr>
+      <tr><th>Task</th><td>{% if latest.publish.task %}{{ latest.publish.task.task_name|default:latest.publish.task.task_type }}{% else %}-{% endif %}</td></tr>
+      <tr><th>Publish ID</th><td>{{ latest.publish.id }}</td></tr>
+      <tr><th>Houdini Version</th><td>{{ latest.publish.source_version|default:"-" }}</td></tr>
+      <tr><th>Houdini Iteration</th><td>{{ latest.publish.source_iteration|default:"-" }}</td></tr>
+      <tr><th>Status</th><td>{{ latest.publish.status }}</td></tr>
+      <tr><th>item_usd_path</th><td><code>{{ latest.publish.item_usd_path }}</code></td></tr>
+      <tr><th>asset_usd_path</th><td><code>{{ latest.publish.asset_usd_path }}</code></td></tr>
+      <tr><th>Published</th><td>{{ latest.publish.published_at|date:'Y-m-d H:i' }}</td></tr>
+      <tr><th>Preview</th><td>{% if latest.preview_path %}<a href="{{ latest.preview_path }}" target="_blank" rel="noreferrer">{{ latest.preview_path }}</a>{% else %}-{% endif %}</td></tr>
+    </tbody>
+  </table>
+{% endif %}
+
+<h2>History</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Published</th>
+      <th>Publish ID</th>
+      <th>Houdini Ver</th>
+      <th>Houdini Iter</th>
+      <th>Status</th>
+      <th>item_usd_path</th>
+      <th>asset_usd_path</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in history %}
+      <tr>
+        <td>{{ row.publish.published_at|date:'Y-m-d H:i' }}</td>
+        <td>{{ row.publish.id }}</td>
+        <td>{{ row.publish.source_version|default:"-" }}</td>
+        <td>{{ row.publish.source_iteration|default:"-" }}</td>
+        <td>{{ row.publish.status }}</td>
+        <td><code>{{ row.publish.item_usd_path }}</code></td>
+        <td><code>{{ row.publish.asset_usd_path }}</code></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7">No history found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

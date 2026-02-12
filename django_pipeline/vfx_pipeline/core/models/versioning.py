@@ -30,6 +30,8 @@ class Publish(models.Model):
         ("pending", "Pending Review"),
         ("approved", "Approved"),
         ("deprecated", "Deprecated"),
+        ("published", "Published"),
+        ("failed", "Failed"),
     ]
 
     project = models.ForeignKey("core.Project", on_delete=models.CASCADE, related_name="publishes")
@@ -40,9 +42,12 @@ class Publish(models.Model):
     created_by = models.ForeignKey("core.Artist", on_delete=models.SET_NULL, blank=True, null=True, related_name="publishes_created")
     software = models.CharField(max_length=32, blank=True)
     label = models.CharField(max_length=128, blank=True)
-    version = models.PositiveIntegerField(default=1)
-    iteration = models.PositiveIntegerField(default=1)
+    source_version = models.IntegerField(blank=True, null=True)
+    source_iteration = models.IntegerField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    item_usd_path = models.TextField(blank=True)
+    asset_usd_path = models.TextField(blank=True)
+    preview_path = models.TextField(blank=True)
     comment = models.TextField(blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     published_at = models.DateTimeField(default=timezone.now)
@@ -55,14 +60,16 @@ class Publish(models.Model):
             "target_content_type",
             "target_object_id",
             "task",
-            "version",
-            "iteration",
         )
         ordering = ["-published_at"]
 
     def __str__(self) -> str:
         target_name = getattr(self.target, "code", None) or getattr(self.target, "name", None)
-        label = self.label or f"v{self.version:03d}" if self.version else "Publish"
+        if self.source_version is not None and self.source_iteration is not None:
+            default_label = f"s{self.source_version:03d}-i{self.source_iteration:03d}"
+        else:
+            default_label = f"#{self.id}" if self.id else "Publish"
+        label = self.label or default_label
         return f"{target_name or 'Publish'} {label}"
 
 

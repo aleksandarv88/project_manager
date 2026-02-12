@@ -1,3 +1,4 @@
+import os
 import psycopg2
 
 def setup_users_table():
@@ -5,7 +6,7 @@ def setup_users_table():
         host = "localhost",
         dbname = "testdb",
         user = "postgres",
-        password = "Ifmatoodlon@321"  # Replace with your actual password
+        password = os.environ.get("PM_DB_PASSWORD", os.environ.get("PIPELINE_DB_PASSWORD", ""))
     )
     cur = conn.cursor()
     cur.execute("""

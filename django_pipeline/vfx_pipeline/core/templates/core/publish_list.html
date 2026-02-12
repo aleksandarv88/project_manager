@@ -1,0 +1,65 @@
+{% extends 'core/base.html' %}
+{% block title %}Publishes{% endblock %}
+
+{% block content %}
+<h1>Published Assets</h1>
+
+<form method="get" style="margin-bottom:16px;">
+  <label for="project">Project</label>
+  <select name="project" id="project" onchange="this.form.submit()">
+    <option value="">All Projects</option>
+    {% for project in projects %}
+      <option value="{{ project.id }}" {% if selected_project == project.id|stringformat:"s" %}selected{% endif %}>
+        {{ project.name }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Project</th>
+      <th>Asset</th>
+      <th>Part</th>
+      <th>Publish ID</th>
+      <th>Houdini Ver/Iter</th>
+      <th>Status</th>
+      <th>Published</th>
+      <th>Preview</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.publish.project.name }}</td>
+        <td>{{ row.asset_name }}</td>
+        <td>{{ row.part_name }}</td>
+        <td>{{ row.publish.id }}</td>
+        <td>
+          {% if row.publish.source_version or row.publish.source_iteration %}
+            {{ row.publish.source_version|default:"-" }}/{{ row.publish.source_iteration|default:"-" }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>{{ row.publish.status }}</td>
+        <td>{{ row.publish.published_at|date:'Y-m-d H:i' }}</td>
+        <td>
+          {% if row.preview_path %}
+            <a href="{{ row.preview_path }}" target="_blank" rel="noreferrer">Open</a>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'publish_detail_page' %}?asset={{ row.asset_name }}&part={{ row.part_name }}&project={{ row.publish.project_id }}">View</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="9">No publishes yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

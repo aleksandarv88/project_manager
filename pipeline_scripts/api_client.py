@@ -3,13 +3,20 @@ from __future__ import annotations
 import json
 import os
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit, urlunsplit
 
 
 def _base_url() -> Optional[str]:
     url = os.environ.get("PIPELINE_API_BASE") or os.environ.get("API_BASE_URL")
     if not url:
         return None
-    return url.rstrip("/")
+    normalized = url.rstrip("/")
+    parts = urlsplit(normalized)
+    path = parts.path.rstrip("/")
+    if path.endswith("/api"):
+        path = path[:-4]
+    normalized_parts = (parts.scheme, parts.netloc, path, parts.query, parts.fragment)
+    return urlunsplit(normalized_parts).rstrip("/")
 
 
 def _request(method: str, path: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -54,4 +61,3 @@ def api_get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any
 
 def api_post(path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     return _request("POST", path, data=data)
-

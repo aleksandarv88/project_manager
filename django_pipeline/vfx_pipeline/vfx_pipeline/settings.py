@@ -108,11 +108,11 @@ WSGI_APPLICATION = 'vfx_pipeline.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'FX3X',
-        'USER': 'postgres',
-        'PASSWORD': 'Ifmatoodlon@321',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('PM_DB_NAME', os.environ.get('PIPELINE_DB_NAME', 'FX3X')),
+        'USER': os.environ.get('PM_DB_USER', os.environ.get('PIPELINE_DB_USER', 'postgres')),
+        'PASSWORD': os.environ.get('PM_DB_PASSWORD', os.environ.get('PIPELINE_DB_PASSWORD', 'Ifmatoodlon@321')),
+        'HOST': os.environ.get('PM_DB_HOST', os.environ.get('PIPELINE_DB_HOST', 'localhost')),
+        'PORT': os.environ.get('PM_DB_PORT', os.environ.get('PIPELINE_DB_PORT', '5432')),
     }
 }
 

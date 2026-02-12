@@ -16,7 +16,7 @@ def _push_path(value: str | None, *, front: bool = False) -> None:
 TOOLKIT = os.environ.get("PIPELINE_TOOLKIT_PATH")
 SCRIPTS = os.environ.get("PIPELINE_SCRIPTS_PATH")
 MAYA_LIB = os.environ.get("PIPELINE_MAYA_PYTHON_LIB")
-os.environ.setdefault("PIPELINE_API_BASE", os.environ.get("API_BASE_URL", "http://127.0.0.1:8000"))
+os.environ.setdefault("PIPELINE_API_BASE", os.environ.get("API_BASE_URL", "http://127.0.0.1:8002"))
 
 for candidate in (TOOLKIT, SCRIPTS, MAYA_LIB):
     _push_path(candidate)

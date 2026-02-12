@@ -184,6 +184,8 @@ class TaskForm(forms.ModelForm):
         self.fields['sequence'].empty_label = "-- Select Sequence --"
         self.fields['shot'].queryset = Shot.objects.none()
         self.fields['shot'].empty_label = "-- Select Shot --"
+        self.fields["priority"].required = False
+        self.fields["priority"].initial = Task._meta.get_field("priority").default
 
         if 'sequence' in self.data:
             try:
@@ -243,3 +245,8 @@ class TaskUpdateForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"rows": 2}),
             "notes": forms.Textarea(attrs={"rows": 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["priority"].required = False
+        self.fields["priority"].initial = Task._meta.get_field("priority").default

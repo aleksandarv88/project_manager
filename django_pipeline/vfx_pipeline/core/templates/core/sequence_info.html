@@ -99,7 +99,7 @@
             {% if publish.label %}
               {{ publish.label }}
             {% else %}
-              v{{ publish.version|default:0|stringformat:"03d" }} i{{ publish.iteration|default:0|stringformat:"03d" }}
+              #{{ publish.id }}{% if publish.source_version or publish.source_iteration %} (H {{ publish.source_version|default:0|stringformat:"03d" }}.{{ publish.source_iteration|default:0|stringformat:"03d" }}){% endif %}
             {% endif %}
           </strong>
           {% if publish.task %} · Task {{ publish.task.task_name|default:publish.task.task_type }}{% endif %}
