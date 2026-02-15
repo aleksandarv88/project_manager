@@ -56,11 +56,6 @@ class Publish(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = (
-            "target_content_type",
-            "target_object_id",
-            "task",
-        )
         ordering = ["-published_at"]
 
     def __str__(self) -> str:

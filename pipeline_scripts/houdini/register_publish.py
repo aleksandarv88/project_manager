@@ -30,7 +30,7 @@ def register_publish_to_pm(
     status: str = "published",
 ) -> int:
     """Register a publish in project_manager Django API and return publish_id."""
-    api_url = os.environ.get("PM_API_URL", "http://127.0.0.1:8000/api/publishes/").strip()
+    api_url = os.environ.get("PM_API_URL", "http://127.0.0.1:8002/api/publishes/").strip()
     api_token = os.environ.get("PM_API_TOKEN", "").strip()
     task_id = (os.environ.get("PM_TASK_ID") or "").strip()
     project = (os.environ.get("PM_PROJECT") or "").strip()

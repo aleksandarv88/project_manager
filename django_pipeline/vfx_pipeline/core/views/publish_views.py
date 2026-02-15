@@ -34,7 +34,7 @@ def _derive_asset_part(publish: Publish) -> tuple[str, str]:
     if not path:
         return asset_name or "unknown_asset", part_name or "unknown_part"
 
-    # Expected convention: .../hou/usd/<asset>/<part>/<file>.usd
+    # Expected convention: .../usd/<asset>/<part>/<file>.usd
     parts = [p for p in PurePosixPath(path).parts if p not in {"/", ""}]
     if "usd" in parts:
         usd_idx = parts.index("usd")

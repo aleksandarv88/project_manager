@@ -11,6 +11,7 @@ from django.db import connection, models
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
+from django.utils import timezone
 
 from core.models import (
     Project,
@@ -718,6 +719,241 @@ def _next_publish_numbers(qs: models.QuerySet, bump: str) -> tuple[int, int]:
     return current_version if current_version > 0 else 1, current_iteration + 1 if current_iteration > 0 else 1
 
 
+def _sver(value: Optional[int]) -> int:
+    return int(value or 0)
+
+
+def _path_to_posix(value: str) -> str:
+    return str(value or "").replace("\\", "/")
+
+
+def _extract_usd_context(path_value: str) -> Optional[Dict[str, str]]:
+    path = _path_to_posix(path_value).strip()
+    if not path:
+        return None
+    parts = [p for p in path.split("/") if p]
+    if "sequences" not in parts or "usd" not in parts:
+        return None
+    seq_idx = parts.index("sequences")
+    try:
+        seq = parts[seq_idx + 1]
+        shot = parts[seq_idx + 2]
+        dept = parts[seq_idx + 3]
+    except IndexError:
+        return None
+
+    artist = ""
+    task = ""
+    try:
+        houdini_idx = parts.index("houdini", seq_idx + 4)
+        if parts[houdini_idx + 1] == "scenes":
+            artist = parts[houdini_idx + 2]
+            task = parts[houdini_idx + 3]
+    except Exception:
+        pass
+
+    usd_idx = parts.index("usd", seq_idx + 4)
+    asset = parts[usd_idx + 1] if len(parts) > usd_idx + 1 else ""
+    part = parts[usd_idx + 2] if len(parts) > usd_idx + 2 else ""
+
+    prefix = "/".join(parts[:seq_idx])
+    shared_root = "/".join(parts[: seq_idx + 4]) + "/usd"
+    asset_layer_path = "/".join(parts[: usd_idx + 2]) + f"/{asset}.usd" if asset else ""
+    return {
+        "prefix": prefix,
+        "seq": seq,
+        "shot": shot,
+        "dept": dept,
+        "artist": artist,
+        "task": task,
+        "asset": asset,
+        "part": part,
+        "shared_root": shared_root,
+        "asset_layer_path": asset_layer_path,
+    }
+
+
+def _derive_asset_part_and_stable_path(
+    asset_usd_path: str,
+    item_usd_path: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    asset_name_hint: Optional[str] = None,
+    part_name_hint: Optional[str] = None,
+) -> tuple[str, str, str]:
+    meta = metadata or {}
+    path = _path_to_posix(asset_usd_path or item_usd_path or "")
+    parts = [p for p in path.split("/") if p]
+
+    asset_name = str(
+        asset_name_hint
+        or meta.get("asset_name")
+        or meta.get("asset")
+        or ""
+    ).strip()
+    part_name = str(
+        part_name_hint
+        or meta.get("part_name")
+        or meta.get("fx_layer")
+        or ""
+    ).strip()
+
+    if "usd" in parts:
+        usd_idx = parts.index("usd")
+        if not asset_name and len(parts) > usd_idx + 1:
+            asset_name = parts[usd_idx + 1]
+        if not part_name and len(parts) > usd_idx + 2:
+            part_name = parts[usd_idx + 2]
+
+    if not part_name and path:
+        part_name = Path(path).stem
+    if not asset_name:
+        asset_name = "unknown_asset"
+    if not part_name:
+        part_name = "unknown_part"
+
+    if asset_usd_path:
+        parent = Path(_path_to_posix(asset_usd_path)).parent
+    elif item_usd_path:
+        item_parent = Path(_path_to_posix(item_usd_path)).parent
+        if item_parent.name.lower() == "data":
+            parent = item_parent.parent
+        else:
+            parent = item_parent
+    else:
+        parent = Path(".")
+    stable_path = _path_to_posix(str(parent / f"{part_name}.usd"))
+
+    return asset_name, part_name, stable_path
+
+
+def _write_usda_sublayers(layer_path: str, sublayers: list[str]) -> None:
+    target = Path(layer_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    unique = []
+    seen = set()
+    for candidate in sublayers:
+        normalized = _path_to_posix(candidate).strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(normalized)
+
+    rel_paths = []
+    for sub in unique:
+        rel = os.path.relpath(sub, str(target.parent)).replace("\\", "/")
+        if not rel.startswith("."):
+            rel = f"./{rel}"
+        rel_paths.append(rel)
+
+    lines = [
+        "#usda 1.0",
+        "(",
+        "    subLayers = [",
+    ]
+    for idx, rel in enumerate(rel_paths):
+        comma = "," if idx < len(rel_paths) - 1 else ""
+        lines.append(f'        @"{rel}"@{comma}')
+    lines.extend(
+        [
+            "    ]",
+            ")",
+            "",
+        ]
+    )
+    target.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _collect_latest_publish_paths(project_id: int, matcher) -> Dict[str, str]:
+    latest: Dict[str, tuple[int, int, int, str]] = {}
+    qs = Publish.objects.filter(project_id=project_id).exclude(asset_usd_path="")
+    for candidate in qs:
+        context = _extract_usd_context(candidate.asset_usd_path or "")
+        if not context:
+            continue
+        key = matcher(candidate, context)
+        if not key:
+            continue
+        rank = (
+            _sver(candidate.source_version),
+            _sver(candidate.source_iteration),
+            int(candidate.id or 0),
+            _path_to_posix(candidate.asset_usd_path or ""),
+        )
+        prev = latest.get(key)
+        if not prev or rank[:3] > prev[:3]:
+            latest[key] = rank
+    return {k: v[3] for k, v in latest.items()}
+
+
+def _rebuild_shared_usd_layers(publish: Publish) -> Optional[str]:
+    context = _extract_usd_context(publish.asset_usd_path or "")
+    if not context:
+        return "Skipped shared layer rebuild: could not parse USD context from asset_usd_path."
+
+    seq = context["seq"]
+    shot = context["shot"]
+    dept = context["dept"]
+    artist = context["artist"]
+    asset = context["asset"]
+    shared_root = context["shared_root"]
+    if not all([seq, shot, dept, artist, asset]):
+        return "Skipped shared layer rebuild: missing one or more context fields (seq/shot/dept/artist/asset)."
+
+    # 1) Rebuild asset layer from latest part stable paths (DB authoritative).
+    part_paths = _collect_latest_publish_paths(
+        publish.project_id,
+        lambda p, c: (
+            c["part"]
+            if c["seq"] == seq
+            and c["shot"] == shot
+            and c["dept"] == dept
+            and c["artist"] == artist
+            and c["asset"] == asset
+            else ""
+        ),
+    )
+    asset_layer = context["asset_layer_path"]
+    if asset_layer and part_paths:
+        _write_usda_sublayers(asset_layer, sorted(part_paths.values()))
+
+    # 2) Rebuild artist layer from latest asset layers for the artist context.
+    asset_layer_paths = _collect_latest_publish_paths(
+        publish.project_id,
+        lambda p, c: (
+            c["asset"]
+            if c["seq"] == seq and c["shot"] == shot and c["dept"] == dept and c["artist"] == artist
+            else ""
+        ),
+    )
+    artist_layer_path = f"{shared_root}/artist/{artist}.usd"
+    artist_sublayers = []
+    for _, stable_part_path in sorted(asset_layer_paths.items()):
+        c = _extract_usd_context(stable_part_path)
+        if c and c.get("asset_layer_path"):
+            artist_sublayers.append(c["asset_layer_path"])
+    if artist_sublayers:
+        _write_usda_sublayers(artist_layer_path, artist_sublayers)
+
+    # 3) Rebuild dept layer from artist layers.
+    artist_names = _collect_latest_publish_paths(
+        publish.project_id,
+        lambda p, c: (
+            c["artist"] if c["seq"] == seq and c["shot"] == shot and c["dept"] == dept and c["artist"] else ""
+        ),
+    )
+    dept_layer_path = f"{shared_root}/dept/{dept}.usd"
+    dept_sublayers = [f"{shared_root}/artist/{name}.usd" for name in sorted(artist_names.keys()) if name]
+    if dept_sublayers:
+        _write_usda_sublayers(dept_layer_path, dept_sublayers)
+
+    # 4) Rebuild shot and seq layers in shared root.
+    shot_layer_path = f"{shared_root}/shot/{shot}.usd"
+    _write_usda_sublayers(shot_layer_path, [dept_layer_path])
+    seq_layer_path = f"{shared_root}/seq/{seq}.usd"
+    _write_usda_sublayers(seq_layer_path, [shot_layer_path])
+    return None
+
+
 @csrf_exempt
 def api_publishes_next(request: HttpRequest):
     params = _params(request)
@@ -743,6 +979,8 @@ def api_publishes(request: HttpRequest):
     if request.method == "GET":
         qs = Publish.objects.select_related("task", "created_by").all()
         software_filter = (params.get("software") or "").strip() or None
+        latest_per_part = params.get("latest_per_part") in {"1", "true", "True", True}
+        asset_filter = (params.get("asset") or params.get("asset_name") or "").strip()
         if task_id:
             qs = qs.filter(task_id=task_id)
         if target_type and target_id:
@@ -751,6 +989,33 @@ def api_publishes(request: HttpRequest):
             qs = qs.filter(project_id=params.get("project_id"))
         if software_filter:
             qs = qs.filter(software=software_filter)
+
+        if latest_per_part:
+            latest_map: Dict[str, Dict[str, Any]] = {}
+            for publish in qs.order_by("-source_version", "-source_iteration", "-published_at", "-id"):
+                meta = publish.metadata if isinstance(publish.metadata, dict) else {}
+                asset_name, part_name, stable_path = _derive_asset_part_and_stable_path(
+                    publish.asset_usd_path,
+                    publish.item_usd_path,
+                    metadata=meta,
+                )
+                if asset_filter and asset_name.lower() != asset_filter.lower():
+                    continue
+                if not part_name or not stable_path:
+                    continue
+                key = part_name.lower()
+                if key in latest_map:
+                    continue
+                latest_map[key] = {
+                    "part_name": part_name,
+                    "part_usd_path": stable_path,
+                    "publish_id": publish.id,
+                    "asset_name": asset_name,
+                }
+            data = list(latest_map.values())
+            data.sort(key=lambda item: item["part_name"].lower())
+            return _ok(data)
+
         include_components = params.get("include_components") in {"1", "true", "True", True}
         data = []
         for publish in qs.order_by("-published_at"):
@@ -800,7 +1065,8 @@ def api_publishes(request: HttpRequest):
         return _err("Forbidden", status=403)
 
     item_usd_path = _normalize_file_path(params.get("item_usd_path"))
-    asset_usd_path = _normalize_file_path(params.get("asset_usd_path"))
+    part_usd_path = _normalize_file_path(params.get("part_usd_path"))
+    asset_usd_path = _normalize_file_path(params.get("asset_usd_path") or part_usd_path)
     preview_path = _normalize_file_path(params.get("preview_path"))
 
     if not task_id:
@@ -879,6 +1145,19 @@ def api_publishes(request: HttpRequest):
         qs = _publish_queryset(target_type, target_id, task_id, (params.get("software") or "").strip() or None)
         source_version, source_iteration = _next_publish_numbers(qs, bump)
 
+    metadata = _parse_metadata(params.get("metadata"))
+    asset_name, part_name, stable_part_path = _derive_asset_part_and_stable_path(
+        asset_usd_path,
+        item_usd_path,
+        metadata=metadata,
+        asset_name_hint=params.get("asset_name"),
+        part_name_hint=params.get("part_name"),
+    )
+    metadata["asset_name"] = asset_name
+    metadata["asset"] = asset_name
+    metadata["part_name"] = part_name
+    metadata["fx_layer"] = part_name
+
     publish = Publish.objects.create(
         project=project,
         target_content_type=content_type,
@@ -891,13 +1170,15 @@ def api_publishes(request: HttpRequest):
         source_iteration=source_iteration,
         status=(params.get("status") or "pending").strip() or "pending",
         item_usd_path=item_usd_path,
-        asset_usd_path=asset_usd_path,
+        asset_usd_path=stable_part_path,
         preview_path=preview_path,
         comment=(params.get("comment") or "").strip(),
-        metadata=_parse_metadata(params.get("metadata")),
+        metadata=metadata,
+        is_latest=True,
+        published_at=timezone.now(),
     )
 
-    # Ensure latest flag
+    # Ensure latest flag for the same stream (target + task + software scope).
     latest_qs = Publish.objects.filter(
         target_content_type=content_type,
         target_object_id=target.id,
@@ -917,43 +1198,53 @@ def api_publishes(request: HttpRequest):
         for component in components:
             if not isinstance(component, dict):
                 continue
-            PublishComponent.objects.create(
+            component_name = component.get("name") or component.get("label") or "main"
+            component_type = component.get("component_type", "scene")
+            PublishComponent.objects.update_or_create(
                 publish=publish,
-                name=component.get("name") or component.get("label") or "main",
-                component_type=component.get("component_type", "scene"),
-                file_path=component.get("file_path", ""),
-                file_size=_parse_int(component.get("file_size")),
-                hash_md5=component.get("hash_md5", ""),
-                frame_start=_parse_int(component.get("frame_start")),
-                frame_end=_parse_int(component.get("frame_end")),
-                metadata=_parse_metadata(component.get("metadata")),
+                name=component_name,
+                component_type=component_type,
+                defaults={
+                    "file_path": component.get("file_path", ""),
+                    "file_size": _parse_int(component.get("file_size")),
+                    "hash_md5": component.get("hash_md5", ""),
+                    "frame_start": _parse_int(component.get("frame_start")),
+                    "frame_end": _parse_int(component.get("frame_end")),
+                    "metadata": _parse_metadata(component.get("metadata")),
+                },
             )
     else:
         components = []
 
     if item_usd_path:
-        PublishComponent.objects.create(
+        PublishComponent.objects.update_or_create(
             publish=publish,
             name="item_usd",
             component_type="data",
-            file_path=item_usd_path,
-            metadata={"role": "item_usd"},
+            defaults={
+                "file_path": item_usd_path,
+                "metadata": {"role": "item_usd"},
+            },
         )
-    if asset_usd_path:
-        PublishComponent.objects.create(
+    if stable_part_path:
+        PublishComponent.objects.update_or_create(
             publish=publish,
             name="asset_usd",
             component_type="data",
-            file_path=asset_usd_path,
-            metadata={"role": "asset_usd"},
+            defaults={
+                "file_path": stable_part_path,
+                "metadata": {"role": "asset_usd"},
+            },
         )
     if preview_path:
-        PublishComponent.objects.create(
+        PublishComponent.objects.update_or_create(
             publish=publish,
             name="preview",
             component_type="preview",
-            file_path=preview_path,
-            metadata={"role": "preview"},
+            defaults={
+                "file_path": preview_path,
+                "metadata": {"role": "preview"},
+            },
         )
 
     links = params.get("links")
@@ -980,18 +1271,27 @@ def api_publishes(request: HttpRequest):
                 defaults={"notes": link.get("notes", "")},
             )
 
-    return _ok(
-        {
-            "publish_id": publish.id,
-            "id": publish.id,
-            "source_version": publish.source_version,
-            "source_iteration": publish.source_iteration,
-            # Backward-compatible keys for older clients.
-            "version": publish.source_version,
-            "iteration": publish.source_iteration,
-            "is_latest": publish.is_latest,
-        },
-        status=201,
-    )
+    layer_warning = None
+    try:
+        layer_warning = _rebuild_shared_usd_layers(publish)
+    except Exception as exc:
+        layer_warning = f"Shared layer rebuild failed: {exc}"
+
+    response_data = {
+        "publish_id": publish.id,
+        "id": publish.id,
+        "source_version": publish.source_version,
+        "source_iteration": publish.source_iteration,
+        # Backward-compatible keys for older clients.
+        "version": publish.source_version,
+        "iteration": publish.source_iteration,
+        "is_latest": publish.is_latest,
+        "part_name": part_name,
+        "part_usd_path": stable_part_path,
+    }
+    if layer_warning:
+        response_data["layer_warning"] = layer_warning
+
+    return _ok(response_data, status=201)
 
 

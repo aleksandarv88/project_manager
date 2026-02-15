@@ -228,24 +228,20 @@ def _build_scene_path(context: PipelineContext, version: int, iteration: int) ->
     if department:
         parts.append(_sanitize_name(department))
 
-    if context.asset:
+    # Naming spec: {artist}_{dept}_{task}_v{VER:03}_i{ITER:03}.{ext}
+    # TASK is preferred semantic field for scene naming, even if TASK == ASSET.
+    task_label = context.task_name or context.task_folder
+    if task_label:
+        parts.append(_sanitize_name(task_label))
+    elif context.asset:
         parts.append(_sanitize_name(context.asset))
     else:
-        task_label = context.task_name or context.task_folder
-        if task_label:
-            parts.append(_sanitize_name(task_label))
-        if context.project:
-            parts.append(_sanitize_name(context.project))
-        if context.sequence:
-            parts.append(_sanitize_name(context.sequence))
-        if context.shot:
-            parts.append(_sanitize_name(context.shot))
-        if not (context.project or context.sequence or context.shot):
-            parts.append(f"task{context.task_id}")
+        parts.append(f"task{context.task_id}")
 
     base = _sanitize_name("_".join(filter(None, parts)))
     version_label = versioning.format_version_label(version)
-    filename = f"{base}_{version_label}{extension}"
+    iteration_label = versioning.format_iteration_label(iteration)
+    filename = f"{base}_{version_label}_{iteration_label}{extension}"
     return context.scene_dir / filename
 
 

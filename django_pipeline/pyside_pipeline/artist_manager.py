@@ -296,7 +296,8 @@ class TaskRecord:
         workspace.mkdir(parents=True, exist_ok=True)
         usd_dir = workspace / "usd"
         usd_dir.mkdir(parents=True, exist_ok=True)
-        (usd_dir / "data").mkdir(parents=True, exist_ok=True)
+        if self.asset_name:
+            (usd_dir / self.asset_name).mkdir(parents=True, exist_ok=True)
         return workspace
 
 
@@ -319,7 +320,7 @@ class SceneRecord:
     def iteration_label(self) -> str:
         if versioning:
             return versioning.format_iteration_label(self.iteration)
-        return f"i{int(self.iteration):02d}"
+        return f"i{int(self.iteration):03d}"
 
 def build_db_params() -> Dict[str, str]:
     params: Dict[str, str] = {}
@@ -945,7 +946,7 @@ class FX3XManager(QWidget):
                 p.task_id,
                 COALESCE(p.created_by_id, 0) AS artist_id,
                 p.software,
-                COALESCE(pc.file_path, p.item_usd_path, p.asset_usd_path) AS file_path,
+                pc.file_path AS file_path,
                 COALESCE(p.source_version, 0) AS version,
                 COALESCE(p.source_iteration, 0) AS iteration,
                 p.published_at AS created_at,
@@ -962,6 +963,7 @@ class FX3XManager(QWidget):
             WHERE p.task_id = %s
               AND p.software = %s
               AND (p.created_by_id = %s OR p.created_by_id IS NULL)
+              AND pc.file_path IS NOT NULL
             ORDER BY p.source_version DESC, p.source_iteration DESC, p.id DESC;
             """,
             (
