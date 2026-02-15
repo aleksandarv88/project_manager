@@ -1,6 +1,37 @@
-django_pipeline/venv/
-django_pipeline/__pycache__/
-django_pipeline/*.pyc
-django_pipeline/.DS_Store
+# Python
 __pycache__/
-.vscode
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtualenvs
+.venv/
+venv/
+env/
+django_pipeline/venv/
+
+# Django / local data
+*.log
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,22 +1,29 @@
 import os
 import subprocess
 
-# ---- EDIT THESE ----
-HOUDINI_EXE   = r"C:\Program Files\Side Effects Software\Houdini 21.0.512\bin\houdini.exe"
-TEMPLATE_HIP  = r"D:\Work\Houdini\Pipeline_Test\houdini_templates\usd_pipeline_builder_temp.hip"
+HOUDINI_EXE = os.environ.get(
+    "HOUDINI_EXE",
+    r"C:\Program Files\Side Effects Software\Houdini 21.0.512\bin\houdini.exe",
+)
+TEMPLATE_HIP = os.environ.get(
+    "PM_TEMPLATE_HIP",
+    os.path.join(os.path.dirname(__file__), "usd_pipeline_builder_temp.hip"),
+)
 
-PM_HDA_NODE   = "/stage/usd_pipeline_builder1"
-PM_BUTTONS    = "create_seq,create_shot,update_seq,create_dep,update_shot,create_artist,update_dep,create_asset,update_artist"  # example
+PM_HDA_NODE = os.environ.get("PM_HDA_NODE", "/stage/usd_pipeline_builder1")
+PM_BUTTONS = os.environ.get(
+    "PM_BUTTONS",
+    "create_seq,create_shot,update_seq,create_dep,update_shot,create_artist,update_dep,create_asset,update_artist",
+)
 
-PM_ROOT  = r"D:\Work\Houdini\USD"
-PM_SHOW  = "Test"
-PM_SEQ   = "010"
-PM_SHOT  = "0500"
-PM_DEP   = "fx"
-PM_ARTIST= "Artist01"
-PM_TASK  = "PinchIn"
-PM_ASSET = "PinchIn"
-# --------------------
+PM_ROOT = os.environ.get("PM_ROOT", "/path/to/pipeline/root")
+PM_SHOW = os.environ.get("PM_SHOW", "DemoShow")
+PM_SEQ = os.environ.get("PM_SEQ", "010")
+PM_SHOT = os.environ.get("PM_SHOT", "0010")
+PM_DEP = os.environ.get("PM_DEP", "fx")
+PM_ARTIST = os.environ.get("PM_ARTIST", "artist01")
+PM_TASK = os.environ.get("PM_TASK", "task01")
+PM_ASSET = os.environ.get("PM_ASSET", "asset01")
 
 env = os.environ.copy()
 

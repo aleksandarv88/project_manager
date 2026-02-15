@@ -119,7 +119,7 @@ RUNTIME_SITE_PACKAGES = _collect_python_paths()
 DEFAULT_DB_CONFIG: Dict[str, str] = {
     "dbname": "FX3X",
     "user": "postgres",
-    "password": "Ifmatoodlon@321",
+    "password": "",
     "host": "localhost",
     "port": "5432",
 }

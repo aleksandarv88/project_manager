@@ -51,7 +51,7 @@ except Exception:  # noqa: BLE001
 DEFAULTS = {
     "dbname": os.environ.get("DB_NAME") or os.environ.get("PIPELINE_DB_NAME", "FX3X"),
     "user": os.environ.get("DB_USER") or os.environ.get("PIPELINE_DB_USER", "postgres"),
-    "password": os.environ.get("DB_PASSWORD") or os.environ.get("PIPELINE_DB_PASSWORD", "Ifmatoodlon@321"),
+    "password": os.environ.get("DB_PASSWORD") or os.environ.get("PIPELINE_DB_PASSWORD", ""),
     "host": os.environ.get("DB_HOST") or os.environ.get("PIPELINE_DB_HOST", "localhost"),
     "port": os.environ.get("DB_PORT") or os.environ.get("PIPELINE_DB_PORT", "5432"),
 }
