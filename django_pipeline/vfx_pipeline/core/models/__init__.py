@@ -8,6 +8,8 @@ from .task import Task, TaskAssignment
 from .tag import Tag, AssetTag, ShotTag, SequenceTag
 from .versioning import (
     AssetArtistAssignment,
+    AssetTexture,
+    AssetVersion,
     Publish,
     PublishComponent,
     ShotAssetUsage,
@@ -28,6 +30,8 @@ __all__ = [
     "ShotTag",
     "SequenceTag",
     "AssetArtistAssignment",
+    "AssetTexture",
+    "AssetVersion",
     "Publish",
     "PublishComponent",
     "ShotAssetUsage",

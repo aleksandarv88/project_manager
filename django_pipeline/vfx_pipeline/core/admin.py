@@ -3,6 +3,8 @@ from django.contrib import admin
 from .models import (
     Asset,
     AssetArtistAssignment,
+    AssetTexture,
+    AssetVersion,
     AssetTag,
     Artist,
     Project,
@@ -62,6 +64,30 @@ admin.site.register(SequenceTag)
 admin.site.register(ShotTag)
 admin.site.register(TaskAssignment)
 admin.site.register(AssetArtistAssignment)
+@admin.register(AssetVersion)
+class AssetVersionAdmin(admin.ModelAdmin):
+    list_display = (
+        "asset",
+        "version",
+        "fbx_name",
+        "asset_type",
+        "pose_type",
+        "deform_type",
+        "asset_category",
+        "status",
+        "qc_status",
+        "registered_at",
+    )
+    search_fields = ("asset__name", "fbx_name", "registered_by")
+    list_filter = ("asset_type", "pose_type", "deform_type", "asset_category", "status", "qc_status", "registered_at")
+
+
+@admin.register(AssetTexture)
+class AssetTextureAdmin(admin.ModelAdmin):
+    list_display = ("asset_version", "texture_name", "file_ext", "file_size", "created_at")
+    search_fields = ("asset_version__asset__name", "texture_name", "texture_path")
+    list_filter = ("file_ext", "created_at")
+
 @admin.register(Publish)
 class PublishAdmin(admin.ModelAdmin):
     list_display = (

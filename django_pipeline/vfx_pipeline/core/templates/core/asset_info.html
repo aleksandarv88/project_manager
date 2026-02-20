@@ -83,6 +83,68 @@
         <a href="{% url 'asset_list' %}" class="info-btn info-btn-danger">Back</a>
       </div>
     </form>
+
+    <div class="info-section" style="margin-top: 24px;">
+      <h3>Versions</h3>
+      {% if versions %}
+        <form method="get" style="margin-bottom: 12px;">
+          <label for="version">Select Version</label>
+          <select id="version" name="version" onchange="this.form.submit()">
+            {% for version in versions %}
+              <option value="{{ version.id }}" {% if selected_version and selected_version.id == version.id %}selected{% endif %}>
+                v{{ version.version|stringformat:"03d" }} - {{ version.registered_at|date:'Y-m-d H:i' }}
+              </option>
+            {% endfor %}
+          </select>
+        </form>
+
+        {% if selected_version %}
+          <div class="info-profile-meta">
+            <div><div class="info-meta-label">fbx_name</div><div class="info-meta-value">{{ selected_version.fbx_name }}</div></div>
+            <div><div class="info-meta-label">qc_status</div><div class="info-meta-value">{{ selected_version.get_qc_status_display }}</div></div>
+            <div><div class="info-meta-label">status</div><div class="info-meta-value">{{ selected_version.get_status_display }}</div></div>
+            <div><div class="info-meta-label">registered_by</div><div class="info-meta-value">{{ selected_version.registered_by|default:"-" }}</div></div>
+            <div><div class="info-meta-label">asset_type</div><div class="info-meta-value">{{ selected_version.get_asset_type_display }}</div></div>
+            <div><div class="info-meta-label">asset_category</div><div class="info-meta-value">{{ selected_version.get_asset_category_display }}</div></div>
+            <div><div class="info-meta-label">skeleton_type</div><div class="info-meta-value">{{ selected_version.get_skeleton_type_display }}</div></div>
+            <div><div class="info-meta-label">pose_type</div><div class="info-meta-value">{{ selected_version.get_pose_type_display }}</div></div>
+            <div><div class="info-meta-label">deform_type</div><div class="info-meta-value">{{ selected_version.get_deform_type_display }}</div></div>
+            <div><div class="info-meta-label">units</div><div class="info-meta-value">{{ selected_version.units }}</div></div>
+            <div><div class="info-meta-label">scale_to_canonical</div><div class="info-meta-value">{{ selected_version.scale_to_canonical }}</div></div>
+            <div><div class="info-meta-label">height_cm</div><div class="info-meta-value">{{ selected_version.height_cm|default:"-" }}</div></div>
+            <div><div class="info-meta-label">gender</div><div class="info-meta-value">{{ selected_version.get_gender_display|default:"-" }}</div></div>
+            <div><div class="info-meta-label">age_group</div><div class="info-meta-value">{{ selected_version.get_age_group_display|default:"-" }}</div></div>
+            <div><div class="info-meta-label">body_type</div><div class="info-meta-value">{{ selected_version.get_body_type_display|default:"-" }}</div></div>
+            <div><div class="info-meta-label">role_tag</div><div class="info-meta-value">{{ selected_version.get_role_tag_display|default:"-" }}</div></div>
+            <div><div class="info-meta-label">role_text</div><div class="info-meta-value">{{ selected_version.role_text|default:"-" }}</div></div>
+            <div><div class="info-meta-label">qc_report_path</div><div class="info-meta-value">{{ selected_version.qc_report_path|default:"-" }}</div></div>
+          </div>
+          <div class="info-section">
+            <h3>Paths</h3>
+            <p><strong>fbx_path:</strong> <code>{{ selected_version.fbx_path }}</code></p>
+            <p><strong>textures_path:</strong> <code>{{ selected_version.textures_path }}</code></p>
+          </div>
+          <div class="info-section">
+            <h3>Textures</h3>
+            <ul class="info-list">
+              {% for texture in selected_version.textures.all %}
+                <li><code>{{ texture.texture_name }}</code> - <code>{{ texture.texture_path }}</code></li>
+              {% empty %}
+                <li>No texture files registered.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% if selected_version.notes %}
+            <div class="info-section">
+              <h3>Notes</h3>
+              <p>{{ selected_version.notes }}</p>
+            </div>
+          {% endif %}
+        {% endif %}
+      {% else %}
+        <p>No registered versions yet.</p>
+      {% endif %}
+    </div>
   </div>
 </div>
 

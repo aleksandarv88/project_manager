@@ -1,7 +1,7 @@
 ﻿from django.shortcuts import render, redirect, get_object_or_404
 
 from core.forms import AssetForm
-from core.models import Asset, Project
+from core.models import Asset, Project, AssetVersion
 
 
 def asset_list(request):
@@ -52,11 +52,21 @@ def asset_info(request, asset_id):
     else:
         form = AssetForm(instance=asset)
 
+    versions = AssetVersion.objects.filter(asset=asset).prefetch_related("textures").order_by("-version", "-registered_at", "-id")
+    selected_version = None
+    selected_version_id = request.GET.get("version")
+    if selected_version_id:
+        selected_version = versions.filter(id=selected_version_id).first()
+    if selected_version is None:
+        selected_version = versions.first()
+
     return render(
         request,
         "core/asset_info.html",
         {
             "asset": asset,
             "form": form,
+            "versions": versions,
+            "selected_version": selected_version,
         },
     )

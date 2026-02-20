@@ -24,6 +24,143 @@ class AssetArtistAssignment(models.Model):
         return f"{self.artist} on {self.asset}"
 
 
+class AssetVersion(models.Model):
+    ASSET_TYPE_CHOICES = [
+        ("character", "Character"),
+        ("prop", "Prop"),
+    ]
+
+    ASSET_CATEGORY_CHOICES = [
+        ("human", "Human"),
+        ("creature", "Creature"),
+        ("robot", "Robot"),
+        ("weapon", "Weapon"),
+        ("bag", "Bag"),
+        ("hair", "Hair"),
+        ("other", "Other"),
+    ]
+
+    SKELETON_TYPE_CHOICES = [
+        ("mixamo", "Mixamo"),
+        ("none", "None"),
+        ("custom", "Custom"),
+    ]
+
+    POSE_TYPE_CHOICES = [
+        ("t_pose", "T-Pose"),
+        ("animation", "Animation"),
+    ]
+
+    DEFORM_TYPE_CHOICES = [
+        ("skeleton_only", "Skeleton Only"),
+        ("skinned", "Skinned"),
+    ]
+
+    UNITS_CHOICES = [
+        ("cm", "cm"),
+        ("m", "m"),
+    ]
+
+    GENDER_CHOICES = [
+        ("male", "Male"),
+        ("female", "Female"),
+        ("neutral", "Neutral"),
+        ("unknown", "Unknown"),
+    ]
+
+    AGE_GROUP_CHOICES = [
+        ("child", "Child"),
+        ("teen", "Teen"),
+        ("adult", "Adult"),
+        ("elder", "Elder"),
+        ("unknown", "Unknown"),
+    ]
+
+    BODY_TYPE_CHOICES = [
+        ("slim", "Slim"),
+        ("average", "Average"),
+        ("heavy", "Heavy"),
+        ("athletic", "Athletic"),
+        ("unknown", "Unknown"),
+    ]
+
+    ROLE_TAG_CHOICES = [
+        ("civilian", "Civilian"),
+        ("soldier", "Soldier"),
+        ("worker", "Worker"),
+        ("police", "Police"),
+        ("monster", "Monster"),
+        ("custom", "Custom"),
+    ]
+
+    STATUS_CHOICES = [
+        ("wip", "WIP"),
+        ("approved", "Approved"),
+    ]
+
+    QC_STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("pass", "Pass"),
+        ("fail", "Fail"),
+    ]
+
+    asset = models.ForeignKey("core.Asset", on_delete=models.CASCADE, related_name="versions")
+    version = models.IntegerField()
+
+    fbx_name = models.CharField(max_length=128)
+    fbx_path = models.TextField()
+    textures_path = models.TextField()
+
+    asset_type = models.CharField(max_length=16, choices=ASSET_TYPE_CHOICES)
+    asset_category = models.CharField(max_length=16, choices=ASSET_CATEGORY_CHOICES)
+    skeleton_type = models.CharField(max_length=16, choices=SKELETON_TYPE_CHOICES)
+    pose_type = models.CharField(max_length=16, choices=POSE_TYPE_CHOICES, default="t_pose")
+    deform_type = models.CharField(max_length=24, choices=DEFORM_TYPE_CHOICES, default="skinned")
+    units = models.CharField(max_length=4, choices=UNITS_CHOICES)
+    scale_to_canonical = models.FloatField()
+    height_cm = models.IntegerField(blank=True, null=True)
+
+    gender = models.CharField(max_length=16, choices=GENDER_CHOICES, blank=True)
+    age_group = models.CharField(max_length=16, choices=AGE_GROUP_CHOICES, blank=True)
+    body_type = models.CharField(max_length=16, choices=BODY_TYPE_CHOICES, blank=True)
+    role_tag = models.CharField(max_length=16, choices=ROLE_TAG_CHOICES, blank=True)
+    role_text = models.CharField(max_length=128, blank=True)
+
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="wip")
+    notes = models.TextField(blank=True)
+
+    qc_status = models.CharField(max_length=16, choices=QC_STATUS_CHOICES, default="pending")
+    qc_report_path = models.TextField(blank=True)
+
+    registered_by = models.CharField(max_length=128, blank=True)
+    registered_at = models.DateTimeField(default=timezone.now)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("asset", "version")
+        ordering = ["-registered_at", "-version", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.asset.name} v{self.version:03d}"
+
+
+class AssetTexture(models.Model):
+    asset_version = models.ForeignKey("core.AssetVersion", on_delete=models.CASCADE, related_name="textures")
+    texture_name = models.CharField(max_length=256)
+    texture_path = models.TextField()
+    file_ext = models.CharField(max_length=16, blank=True)
+    file_size = models.BigIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["texture_name", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.asset_version}::{self.texture_name}"
+
+
 class Publish(models.Model):
     STATUS_CHOICES = [
         ("draft", "Draft"),

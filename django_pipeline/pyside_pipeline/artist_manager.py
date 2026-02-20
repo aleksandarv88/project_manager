@@ -28,6 +28,14 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 try:
+    from ui_style import apply_stylesheet
+except Exception:
+    try:
+        from pyside_pipeline.ui_style import apply_stylesheet
+    except Exception:
+        def apply_stylesheet(app) -> None:
+            pass
+try:
     from pipe_common import env_vars as EV  # centralized env var keys
 except Exception:
     EV = None  # fallback if package not available
@@ -93,6 +101,13 @@ def _merge_python_paths(new_entries: List[str], existing: Optional[str]) -> str:
     if existing:
         items.extend(entry for entry in existing.split(os.pathsep) if entry)
     return os.pathsep.join(_unique_paths(items))
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = (os.environ.get(name) or "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
 
 
 def _build_houdini_path(existing: Optional[str]) -> str:
@@ -1212,23 +1227,24 @@ class FX3XManager(QWidget):
         env["TOOLKIT_PATH"] = str(BASE_DIR)
         env["PIPELINE_SCRIPTS_PATH"] = str(PIPELINE_ROOT)
         env["SCRIPTS_PATH"] = str(PIPELINE_ROOT)
+        # Keep Qt-injected menu disabled by default; XML menu is primary.
+        env.setdefault("PIPELINE_INSTALL_QT_MENU", "0")
         if PIPELINE_HOUDINI_PYTHON_LIB.exists():
             env["PIPELINE_HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
             env["HOUDINI_PYTHON_LIB"] = str(PIPELINE_HOUDINI_PYTHON_LIB)
         if PIPELINE_MAYA_PYTHON_LIB.exists():
             env["PIPELINE_MAYA_PYTHON_LIB"] = str(PIPELINE_MAYA_PYTHON_LIB)
             env["MAYA_PYTHON_LIB"] = str(PIPELINE_MAYA_PYTHON_LIB)
-        if software == 'houdini':
-            python_paths = [
-                str(PIPELINE_HOUDINI_PYTHON_LIB),
-                str(BASE_DIR),
-                str(PIPELINE_ROOT),
-            ]
+        inject_houdini_env = _env_flag("PIPELINE_INJECT_HOUDINI_ENV", default=False)
+        if software == 'houdini' and inject_houdini_env:
+            python_paths = [str(BASE_DIR), str(PIPELINE_ROOT)]
+            if PIPELINE_HOUDINI_PYTHON_LIB.exists():
+                python_paths.insert(0, str(PIPELINE_HOUDINI_PYTHON_LIB))
             env["PYTHONPATH"] = _merge_python_paths(python_paths, env.get("PYTHONPATH"))
         elif software not in {'maya'}:
             python_paths = [str(BASE_DIR), str(PIPELINE_ROOT)]
             env["PYTHONPATH"] = _merge_python_paths(python_paths, env.get("PYTHONPATH"))
-        if software == "houdini":
+        if software == "houdini" and inject_houdini_env:
             env["HOUDINI_PATH"] = _build_houdini_path(env.get("HOUDINI_PATH"))
         elif software == "maya":
             env["MAYA_SCRIPT_PATH"] = _merge_path_list(
@@ -1268,94 +1284,6 @@ class FX3XManager(QWidget):
                 self.conn.close()
         finally:
             super().closeEvent(event)
-
-def apply_stylesheet(app: QApplication) -> None:
-    app.setStyleSheet(
-        """
-        QWidget {
-            background-color: #1f1f22;
-            color: #f0f0f0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 12pt;
-        }
-        #HeaderLabel {
-            font-size: 24pt;
-            font-weight: 600;
-            color: #ff8800;
-        }
-        #SectionLabel {
-            font-size: 14pt;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        #FieldLabel {
-            font-weight: 600;
-            color: #ffa64d;
-        }
-        #DetailValue {
-            font-size: 11pt;
-        }
-        QFrame#Card {
-            background-color: #2a2a2e;
-            border-radius: 12px;
-            border: 1px solid #3c3c42;
-        }
-        QComboBox {
-            background-color: #343438;
-            border: 1px solid #4c4c52;
-            border-radius: 6px;
-            padding: 6px 8px;
-        }
-        QComboBox::drop-down {
-            border: none;
-        }
-        QComboBox QAbstractItemView {
-            background-color: #2f2f33;
-            color: #f6f6f6;
-            selection-background-color: #ff8800;
-            selection-color: #101010;
-        }
-        QTableWidget {
-            background-color: #1f1f23;
-            alternate-background-color: #26262a;
-            gridline-color: #3e3e42;
-            border: 1px solid #35353a;
-            border-radius: 8px;
-        }
-        QHeaderView::section {
-            background-color: #303035;
-            color: #f0f0f0;
-            padding: 6px;
-            border: none;
-        }
-        QTableWidget::item:selected {
-            background-color: #ff8800;
-            color: #101010;
-        }
-        QPushButton {
-            background-color: #ff8800;
-            color: #101010;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-weight: 600;
-        }
-        QPushButton:disabled {
-            background-color: #3d3d42;
-            color: #7a7a7f;
-        }
-        QPushButton:hover:!disabled {
-            background-color: #ffa347;
-        }
-        QPushButton:pressed:!disabled {
-            background-color: #cc6b00;
-        }
-        QMessageBox {
-            background-color: #2a2a2e;
-        }
-        """
-    )
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
